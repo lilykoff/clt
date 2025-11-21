@@ -82,7 +82,11 @@ scale_fill_okabe  <- function(...) scale_fill_manual(values = okabe_ito, ...)
 nh_data = read_rds(here::here("data", "processed", "nhanes_all.rds")) %>% 
   mutate(year = if_else(grepl("NHANES 2001-2002", data_release_cycle), "2001", "2023"))
 
+
 bmx_21 = read_rds(here::here("data", "processed", "bmx_2021.rds"))
+
+nh_joined = nh_data %>% 
+  left_join(bmx_21, by = "respondent_sequence_number")
 
 demo_21 = read_rds(here::here("data", "processed", "demo_2021.rds"))
 
@@ -179,15 +183,17 @@ We will use the Central Limit Theorem (CLT) to help us answer this question.
 ---
 
 
-## Definitions 
+## First, definitions 
+
+::: {.incremental}
 
 + Mean: average, center of data
-
 $$\mathrm{mean}(x, y) = \frac{x + y}{2}$$
 + Standard deviation (sd): measure of spread of data around the mean
-
 $$\mathrm{sd}(x, y) = \sqrt{\frac{(x- mean(x,y))^2 + (y-mean(x,y))^2}{2-1}} $$
 + Distribution: describes data (shape, center, spread) 
+
+:::
 
 ---
 
@@ -199,9 +205,9 @@ $$\mathrm{sd}(x, y) = \sqrt{\frac{(x- mean(x,y))^2 + (y-mean(x,y))^2}{2-1}} $$
 
 
 p_normal = 
-  ggplot(data = tibble(x = c(-3, 3)), aes(x)) +
+  ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
   geom_area(stat = "function", fun = dnorm, args = list(mean = 0, sd = 1), 
-            xlim = c(-3, 3), fill = "#56B4E9", alpha = 0.5) +
+            xlim = c(-3.2, 3.2), fill = "#56B4E9", alpha = 0.5) +
   stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1) +
   theme(axis.text.y = element_blank())+
   labs(y = NULL, x = NULL) +
@@ -280,6 +286,21 @@ bmx_joined %>%
 
 ## What's special about the Normal distribution? 
 
+```{r normal again}
+#| cache: true 
+ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
+  theme(axis.text.y = element_blank()) +
+  labs(y = NULL, x = NULL) +
+  stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
+                linewidth = 1.1) +
+  scale_x_continuous(breaks = seq(-3, 3, 1))
+
+
+```
+
+---
+
+## What's special about the Normal distribution? 
 
 ```{r normal1}
 #| cache: true 
@@ -299,12 +320,20 @@ shade_df3 = tibble(
   y = dnorm(seq(-3, 3, length.out = 500), mean = 0, sd = 1)
 )
 
-pn_1 = ggplot(data = tibble(x = c(-3, 3)), aes(x)) +
+pn_1 = ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
   geom_area(data = shade_df1, aes(x = x, y = y),
             fill = "#E69F00", alpha = 0.5) +
   annotate(geom = "label",
            x = 0, y = 0.3, color = "#E69F00",
-           label = "68% of data") +
+           label = "68% of data",size = 8) +
+  annotate(geom = "segment", x = 1, xend = 1,
+           y = 0, yend= shade_df1$y[shade_df1$x==1],
+           linetype = "dashed") +
+  annotate(geom = "label", x = 1, y = 0.15, label = "Mean + 1 SD", size = 5) +
+   annotate(geom = "segment", x = -1, xend = -1,
+           y = 0, yend= shade_df1$y[shade_df1$x==-1],
+           linetype = "dashed") +
+  annotate(geom = "label", x = -1, y = 0.15, label = "Mean - 1 SD", size = 5) +
   theme(axis.text.y = element_blank()) +
   labs(y = NULL, x = NULL) +
   stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
@@ -329,9 +358,17 @@ pn_2 =
             fill = "#D55E00", alpha = 0.5) +
   annotate(geom = "label",
            x =0, y = 0.2, color = "#D55E00",
-           label = "95% of data") +
+           label = "95% of data",size = 8) +
   stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
-                linewidth = 1.1) 
+                linewidth = 1.1) +
+  annotate(geom = "segment", x = 2, xend = 2,
+           y = 0, yend= shade_df2$y[shade_df2$x==2],
+           linetype = "dashed") +
+  annotate(geom = "label", x = 2, y = 0.025, label = "Mean + 2 SD", size = 5) +
+   annotate(geom = "segment", x = -2, xend = -2,
+           y = 0, yend= shade_df2$y[shade_df2$x==-2],
+           linetype = "dashed") +
+  annotate(geom = "label", x = -2, y = 0.025, label = "Mean - 2 SD", size = 5) 
 
 
 pn_2 
@@ -351,9 +388,17 @@ pn_3 = pn_2 +
             fill = "#F0E442", alpha = 0.5) +
   annotate(geom = "label",
          x = 0, y = 0.1, color = "#F0E442",
-           label = "99.7% of data") +
+           label = "99.7% of data",size = 8) +
   stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
-                linewidth = 1.1) 
+                linewidth = 1.1) +
+  annotate(geom = "segment", x = 3, xend = 3,
+           y = 0, yend= shade_df3$y[shade_df3$x==3],
+           linetype = "dashed") +
+  annotate(geom = "label", x = 3, y = 0.02, label = "Mean + 3 SD", size = 5) +
+   annotate(geom = "segment", x = -3, xend = -3,
+           y = 0, yend= shade_df3$y[shade_df3$x==-3],
+           linetype = "dashed") +
+  annotate(geom = "label", x = -3, y = 0.02, label = "Mean - 3 SD", size = 5) 
 
 
 
@@ -371,7 +416,7 @@ pn_3
 
 pn_3 + 
   geom_vline(aes(xintercept = 0), linetype = "dashed") +
-  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0") 
+  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0", size = 8) 
 ```
 
 ---
@@ -384,13 +429,13 @@ pn_3 +
 
 pn_3 + 
   geom_vline(aes(xintercept = 0), linetype = "dashed") +
-  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0") +
+  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0",size = 8) +
   annotate(geom = "segment", x = 0.5, xend = 1, y = 0.05, yend = 0.05, linetype = "dashed",
                arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
   annotate(geom = "segment", x = 0.5, xend = 0, y = 0.05, yend = 0.05, linetype = "dashed",
                arrow = arrow(length = unit(0.1, "inches"), type = "closed")) + 
-  annotate(geom = "label", x = 0.5, y = 0.05, label = "Standard Deviation (sd) = 1",
-           vjust = 1.5)
+  annotate(geom = "label", x = 0.5, y = 0.05, label = "SD = 1",
+           vjust = 1.5,size = 8)
   
 ```
 
@@ -408,10 +453,10 @@ pn_3 +
                arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
   annotate(geom = "segment", x = 0.5, xend = 0, y = 0.05, yend = 0.05, linetype = "dashed",
                arrow = arrow(length = unit(0.1, "inches"), type = "closed")) + 
-  annotate(geom = "label", x = 0.5, y = 0.05, label = "Standard Deviation (sd) = 1",
+  annotate(geom = "label", x = 0.5, y = 0.05, label = "SD = 1",
            vjust = 1.5) +
   annotate(geom = "label", x = 1.5, y = 0.3, size = 10,
-           label = "X ~ N(mean = 0, sd = 1)")
+           label = "X ~ N(mean = 0, SD = 1)")
   
 ```
 
@@ -485,7 +530,7 @@ p2 = p +
                       label = "-3 SD", color = "darkgrey") + 
   geom_textvline(aes(xintercept = mean_ht + 3*sd_ht), linetype = "dotted",
                       label = "+3 SD", color = "darkgrey") + 
-  annotate(geom = "label", x = 6*12, y = 0.12, label = expression(Height~ "~" ~ N(5.27, 0.23^2)), parse = TRUE)
+  annotate(geom = "label", x = 6*12, y = 0.12, label = expression(Height~ "~" ~ N(5.27, 0.23^2)), parse = TRUE, size = 5)
 
 p2
 ```
@@ -519,6 +564,7 @@ p4 =
   geom_area(data = dens_df %>% filter(x <= 60),
             aes(x, y = y), alpha = 0.3, inherit.aes = F,
             fill = "#0072B2") +
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
   annotate(geom = "label", x = 4.75 * 12, y = 0.025, vjust = 0,
            label = "Probability of height < 5 ft", color = "#0072B2") +
   annotate(geom = "curve",
@@ -526,8 +572,7 @@ p4 =
            xend = 4.9 * 12, yend = 0.01,
            curvature = 0.2,  
            arrow = arrow(length = unit(0.1, "inches"), type = "closed"),
-           color = "#0072B2") +
-  geom_density(linewidth = 1.3, color = "#CC79A7") 
+           color = "#0072B2") 
 
 p4
 ```
@@ -542,15 +587,15 @@ p4 +
   annotate(geom = "text", x = 5.125 * 12, y = 0.13,
            label = "34%", angle = 30) +
   annotate(geom = "text", x = 5.42 * 12, y = 0.13,
-           label = "34%", angle = -35) +
+           label = "34%", angle = -45) +
   annotate(geom = "text", x = 5.625 * 12, y = 0.065,
-           label = "13.5%", angle = -35) +
+           label = "13.5%", angle = -45) +
   annotate(geom = "text", x = 5.85 * 12, y = 0.02,
-           label = "2.5%", angle = -10) +
+           label = "2.5%", angle = -20) +
   annotate(geom = "text", x = 4.9 * 12, y = 0.06,
-           label = "13.5%", angle = 35) +
+           label = "13.5%", angle = 45) +
   annotate(geom = "text", x = 4.65 * 12, y = 0.015,
-           label = "2.5%", angle = 10) 
+           label = "2.5%", angle = 20) 
   
 ```
 
@@ -562,6 +607,22 @@ p4 +
 <div style="font-size: 2.5em;">
 
 ```{r unusual 6}
+#| echo: true 
+
+2.5 + 13.5 
+
+```
+
+
+</div>
+
+---
+
+### How unusual is my height? 
+
+<div style="font-size: 2.5em;">
+
+```{r unusual 6b}
 #| echo: true 
 
 2.5 + 13.5 
@@ -589,7 +650,7 @@ bmx_joined %>%
   scale_color_manual(values = c("#009E73","#CC79A7")) +
   scale_fill_manual(values = c("#009E73","#CC79A7")) +
   scale_x_continuous(breaks=seq(100, 500, 50)) +
-  labs(x = "Weight (lbs)", y = NULL, title = "Weight among American adults",
+  labs(x = "Weight (lbs)", y = "Number of people", title = "Weight among American adults",
        subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
   theme(axis.text.y = element_blank(),
         legend.position = "none") 
@@ -622,7 +683,8 @@ bmx_joined %>%
 #| cache: true 
 
 
-bmx_joined %>% 
+pplot = 
+  bmx_joined %>% 
   filter(age_in_years_at_screening >= 18) %>% 
   ggplot(aes(x = ratio_of_family_income_to_poverty)) + 
   geom_density(linewidth = 1.3, fill = "#56B4E9", alpha = 0.5)  +
@@ -631,6 +693,8 @@ bmx_joined %>%
        subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
   theme(axis.text.y = element_blank(),
         legend.position = "none") 
+
+pplot
 ```
 
 ---
@@ -649,7 +713,7 @@ p_sex = nh_data %>%
   scale_fill_manual(values  = c("#009E73","#CC79A7")) +
   scale_x_continuous(breaks=seq(0, 500, 25),
                      limits = c(0, 500)) +
-  labs(x = "Protein intake (g)", y = NULL, title = "Protein intake among American adults",
+  labs(x = "Protein intake (g)", y = "Number of people", title = "Protein intake among American adults",
        subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
   theme(axis.text.y = element_blank(),
         legend.position = "none",
@@ -662,11 +726,29 @@ nh_data %>%
   geom_density(linewidth = 1.3, alpha = 0.5, fill ="#56B4E9", color = "black")  +
   scale_x_continuous(breaks=seq(0, 600, 25),
                      limits = c(0, 600)) +
-  labs(x = "Protein intake (g)", y = NULL, title = "Protein intake among American adults",
+  labs(x = "Protein intake (g)", y = "Number of people", title = "Protein intake among American adults",
        subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
   theme(axis.text.y = element_blank(),
         legend.position = "none",
         axis.text.x= element_text(angle = 45)) 
+
+nh_joined %>% 
+  filter(age_in_years_at_screening >= 18,
+         year == 2023) %>% 
+  mutate(protein_per_kg= protein_gm/ weight_kg) %>% 
+  ggplot(aes(x = protein_per_kg)) + 
+  geom_density(linewidth = 1.3, alpha = 0.5, fill ="#56B4E9", color = "black")  +
+  scale_x_continuous(breaks=seq(0, 600, 25),
+                     limits = c(0, 600)) +
+  labs(x = "Protein intake (g)", y = "Number of people", title = "Protein intake among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        axis.text.x= element_text(angle = 45)) 
+
+
+
+  
 ```
 
 
@@ -674,7 +756,7 @@ nh_data %>%
 
 ---
 
-### Protein data: means 
+### Protein data: sample mean 
 
 ```{r protein pop1}
 #| cache: true 
@@ -710,7 +792,7 @@ plot_grid(dots, NULL, align = "v", rel_widths = c(1,1), ncol = 2)
 
 ---
 
-### Protein data: means 
+### Protein data: sample mean
 
 ```{r protein samp1}
 #| cache: true 
@@ -743,7 +825,7 @@ plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
 
 ---
 
-### Protein data: means 
+### Protein data: sample mean
 
 ```{r protein samp2}
 #| cache: true 
@@ -776,7 +858,7 @@ plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
 
 ---
 
-### Protein data: means 
+### Protein data: sample mean
 
 ```{r protein samp3}
 #| cache: true 
@@ -841,7 +923,7 @@ sample_means %>%
   ggplot(aes(x = value)) + 
   geom_density(linewidth = 1.3, fill = "#56B4E9", alpha = 0.5) +
   scale_x_continuous(breaks=seq(60, 90, 5)) +
-  labs(x = "Mean protein (g)", y = NULL, title = "Distribution of 500 sample means", subtitle = "From samples of size 50") +
+  labs(x = "Mean protein (g)", y = "Number of people", title = "Distribution of 500 sample means", subtitle = "From samples of size 50") +
   theme(axis.text.y = element_blank(),
         legend.position = "none")
 
@@ -849,6 +931,7 @@ sample_means %>%
 
 ---
 
+### Explore different sample sizes: protein data  
 
 ```{ojs}
 data = FileAttachment("protein_df.csv").csv({ typed: true })
@@ -1002,20 +1085,14 @@ normalCurve = {
 ```{r poverty 2}
 #| cache: true 
 
-
-bmx_joined %>% 
-  filter(age_in_years_at_screening >= 18) %>% 
-  ggplot(aes(x = ratio_of_family_income_to_poverty)) + 
-  geom_density(linewidth = 1.3, fill = "#56B4E9", alpha = 0.5)  +
-  scale_x_continuous(breaks=seq(0, 10, 1)) +
-  labs(x = "Ratio of family income to poverty level", y = NULL, title = "Income among American adults",
-       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
-  theme(axis.text.y = element_blank(),
-        legend.position = "none") 
+pplot
 ```
 
 
+
 ---
+
+### Explore different sample sizes: income data 
 
 ```{ojs}
 data2 = FileAttachment("income_df.csv").csv({ typed: true })
@@ -1165,75 +1242,17 @@ normalCurve2 = {
 }
 ```
 
+---
 
-```{r}
-#| eval: false 
-#| include: false 
-// 4. PLOT
-Plot.plot({
-  width: 900,
-  height: 500,
-  caption: `Distribution of sample means (n=${sample_size2})`,
-    // --- FONT SIZE FIX ---
-  // Applying style at the top level affects all text (axes, ticks, etc.)
-  style: {
-    fontSize: "18px",
-    overflow: "visible" // Ensures labels don't get clipped if they are large
-  },
-  // Increase margins to make room for the larger text
-  marginLeft: 60,
-  marginBottom: 60,
-  marginTop: 50,
-  // DEFINE LEGEND COLORS
-  
-  color: {
-    domain: ["Sample Mean", "Population Mean"],
-    range: ["#D55E00", "black"],
-    legend: true
-  },
-  marks: [
-    // Replaced Plot.density (contours) with Plot.rectY (Histogram)
-    Plot.rectY(sample_means2, Plot.binX({y: "count"}, {
-      x: d => d,
-      fill: "#56B4E9", 
-      fillOpacity: 0.5,
-      tip: true // Adds tooltips on hover
-    })),
-    
-    // The Mean of the Sampling Distribution (Red Line)
-    Plot.ruleX([d3.mean(sample_means2)], { 
-      // stroke: "#D55E00", 
-      stroke: () => "Sample Mean", 
-      strokeWidth: 2,
-      title: d => `Mean: ${d.toFixed(2)}` 
-    }),
-    
-    // Optional: The True Population Mean (Black dashed line)
-    Plot.ruleX([d3.mean(data2, d => d.ratio)], { 
-      // stroke: "black", 
-      stroke: () => "Population Mean", 
-      strokeDasharray: "3,3",
-      opacity: 0.5,
-      title: d => `True Pop Mean: ${d.toFixed(2)}`
-    })
-  ],
-  x: { 
-    label: "Ratio of income to poverty", 
-    tickFormat: ".1f",
-  },
-  y: { 
-    label: "Frequency",
-    //labelOffset: 25, // Push label left so it doesn't overlap ticks
-  }
-})
+## Simulations 
 
+[https://www.statscalculators.com/resources/simulations/central-limit-theorem](https://www.statscalculators.com/resources/simulations/central-limit-theorem)
 
-```
-
+[https://seeing-theory.brown.edu/probability-distributions/index.html](https://seeing-theory.brown.edu/probability-distributions/index.html)
 
 ## Central Limit Theorem Definition 
 
-The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, provided the sample size is sufficiently large $(n \geq 30)$ 
+The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, as long as the sample size is big enough $(n \geq 30)$ 
 
 ---
 
@@ -1242,28 +1261,31 @@ The distribution of the sample means is approximately Normal, regardless of the 
 
 The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, as long as the sample size is big enough $(n \geq 30)$  !!!
 
-$$\mathrm{sample} \hspace{.05in} \mathrm{means} \sim \mathcal{N}\big(\mathrm{mean = pop mean}, \mathrm{sd = pop sd}/\sqrt{\mathrm{sample \hspace{.05in} size}}\big) $$ 
+$$\mathrm{sample} \hspace{.05in} \mathrm{means} \sim \mathcal{N}\big(\mathrm{mean = pop mean}, \mathrm{SD  = pop SD}/\sqrt{\mathrm{sample \hspace{.05in} size}}\big) $$ 
+
 ---
 
 
 
 ## So what? 
 
-</br>
+::: {.incremental}
 
-+ Usually, all we have is the sample mean ($\overline{X}$)
-+ We would like to use that to learn about the population mean (μ)
-+ Now we know the distribution for $\overline{X}$, so we can do that 
++ Usually, all we have is the sample mean 
++ We would like to use that to learn about the population mean 
++ Now we know the distribution for the sample mean, so we can do that 
 + **Without** knowing the shape of the population data 
++ Two things we can do are 
+  + Get a range of plausible values for the population mean (**confidence interval**)
+  + Test whether it is plausible that the population mean is equal to some value (**hypothesis testing**)
+
+:::
 
 ---
 
-### Example 
 
-Protein, again
-
-Let's treat the individuals as the population, but pretend we only observe a sample of size $n=50$ 
-
+### Example: confidence interval 
+ 
 ```{r clt example}
 #| echo: true 
 #| cache: true 
@@ -1274,17 +1296,182 @@ sample_50 = sample(protein_values, size = 50, replace = FALSE)
 sample_mean = mean(sample_50); sample_mean
 ```
 
-We got a sample mean of `r round(sample_mean, 1)`. If the true mean in the population were 60 grams, how surprising would it be to get a sample mean this far from 60?
+::: {.incremental}
+
++ We drew one sample and got a sample mean of `r round(sample_mean, 1)`.
+
++ If we think about all the sample means we could have gotten by sampling repeatedly, that forms a bell-shaped curve centered at `r round(sample_mean, 1)`, with standard deviation equal to the population standard deviation divided by the square root of the sample size
+
++ The middle 95\% of that distribution is the range of population means that would make our result typical — that’s a 95\% confidence interval.
+
+:::
+
+---
+
+
+### Example: confidence interval 
+
+```{r ci}
+#| cache: true
+
+
+sigma = sd(protein_values)
+sim_values = rnorm(100000, mean = sample_mean, sd = sigma / sqrt(50)) %>% 
+  as_tibble()
+
+
+dens2 = density(sim_values$value)
+# q025 = quantile(sim_values$value, 0.025)
+q025 = sample_mean - 2 * (sigma / sqrt(50))
+# q975 = quantile(sim_values$value, 0.975)
+q975 = sample_mean + 2 * (sigma / sqrt(50))
+
+y_val1 = dens2$y[which.min(abs(dens2$x - q025))]
+y_val2 = dens2$y[which.min(abs(dens2$x - q975))]
+
+se = sigma / sqrt(50)
+
+dens_df2 = 
+  tibble(x = dens2$x, 
+         y = dens2$y)
+shade_df = dens_df2 %>% filter(x >= q025, x <= q975)
+
+
+p1 = 
+  sim_values %>%
+  ggplot(aes(x = value)) +
+  labs(x = "Protein (g)", y = NULL, title = "Distribution of sample means") +
+  scale_x_continuous(breaks = seq(45, 90, 5)) +
+  scale_y_continuous(breaks = c(0)) +
+  theme(
+    axis.text.y = element_blank(),
+    legend.position = "none",
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) +
+  geom_vline(aes(xintercept = sample_mean),
+             linetype = "dashed",
+             color = "darkgrey") +
+  annotate(
+    geom = "label",
+    x = sample_mean,
+    y = 0.05,
+    label = glue::glue("Mean = ", round(sample_mean, 1))
+  ) +
+  geom_density(linewidth = 1.3, color = "#CC79A7") 
+
+p1
+```
+
+---
+
+### Example: confidence interval 
+
+```{r ci2}
+#| cache: true
+
+
+p2 = 
+  p1 + 
+  annotate(
+    geom = "segment",
+    x = q025,
+    xend = q025,
+    y = 0,
+    yend = y_val1,
+    linetype = "dashed",
+    color = "darkgrey"
+  ) +
+  annotate(
+    geom = "segment",
+    x = q975,
+    xend = q975,
+    y = 0,
+    yend = y_val2,
+    linetype = "dashed",
+    color = "darkgrey"
+  ) +
+  annotate(
+    geom = "segment",
+    x = q025,
+    xend = q025,
+    y = 0,
+    yend = y_val1,
+    linetype = "dashed",
+    color = "darkgrey"
+  ) +
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
+  annotate(geom = "label", 
+           x = q975, 
+           y = y_val2,
+           label = "Mean + 2 SD",
+           vjust = 2) +
+  annotate(geom = "label", 
+           x = q025, 
+           y = y_val1,
+           label = "Mean - 2 SD",
+           vjust = 2) +
+  scale_x_continuous(breaks = c(50, 55, round(q025, 1), 60, 65, round(sample_mean, 1), 70, 75, round(q975, 1), 80, 85, 90)) 
+
+p2
+```
+
+---
+
+### Example: confidence interval
+
+```{r ci3}
+#| cache: true
+p2 +
+  geom_area(data = shade_df,
+            aes(x, y),
+            fill = "#E69F00",
+            alpha = 0.5)  +
+  annotate(
+    geom = "label",
+    x = (q025 + q975) / 2,
+    y = 0.02,
+    label =
+      glue::glue(
+        "95% of data within\n+/- 2 SD of mean\n( ",
+        round(unname(q025), 1),
+        " , ",
+        round(unname(q975), 1), ")"
+      ),
+   size = 5,
+  ) +
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
+  annotate(geom = "label", 
+           x = q975, 
+           y = y_val2,
+           label = "Mean + 2 SD",
+           vjust = 2) +
+  annotate(geom = "label", 
+           x = q025, 
+           y = y_val1,
+           label = "Mean - 2 SD",
+           vjust = 2) 
+```
+
+---
+
+### Example: hypothesis testing 
+
+Let's say we had some pre-conceived notion that the average protein intake in the population is 60 grams.
+
+We can determine how surprising our observed sample mean of `r round(sample_mean, 1)` would be if the true population mean were really 60 grams.
 
 (This is *hypothesis testing*)
 
+
+
 ---
 
-### Example 
+### Example: hypothesis testing
 
 
 
-If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed: 
+If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed with mean 60 and standard deviation equal to the population standard deviation divided by the square root of the sample size:
 
 $$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$ 
 
@@ -1293,57 +1480,18 @@ $$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$
 
 ---
 
-### Example 
 
-If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed: 
+### Example: hypothesis testing
 
-$$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$ 
-
-What about $\sigma$? 
-
-For now, let's pretend we know it. 
-
-```{r sd}
-#| echo: true 
-
-sigma = sd(protein_values); sigma
-
-```
-
----
-
-### Example 
-
-If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed: 
-
-$$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$ 
-
-What about $\sigma$? 
-
-For now, let's pretend we know it. 
-
-```{r sd2}
-#| echo: true 
-
-sigma = sd(protein_values); sigma
-
-```
-
-$$\overline{X} \sim \mathcal{N}(60, 33.8 / \sqrt{50} = 4.78)$$ 
-
-
----
-
-
-### Example
-
-Let's plot that hypothetical distribution as the pink curve: 
+We plot that hypothetical distribution as the pink curve: 
 
 ```{r ex1}
 #| cache: true 
-sim_values = rnorm(100000, mean = 60, sd = sigma / sqrt(50)) %>% 
-  as_tibble()
 pop_mean = 60
+
+sim_values = rnorm(100000, mean = pop_mean, sd = sigma / sqrt(50)) %>% 
+  as_tibble()
+
 dens2 = density(sim_values$value)
 y_val = dens2$y[which.min(abs(dens2$x - (sample_mean)))]
 se = sigma / sqrt(50)
@@ -1352,6 +1500,8 @@ y_val2 = dens2$y[which.min(abs(dens2$x-(pop_mean - se)))]
 y_val3 = dens2$y[which.min(abs(dens2$x-sample_mean))]
 opp = pop_mean - (sample_mean - pop_mean)
 y_val4 = dens2$y[which.min(abs(dens2$x-opp))]
+y_val5 = dens2$y[which.min(abs(dens2$x-(pop_mean + 2*se)))]
+y_val6 = dens2$y[which.min(abs(dens2$x-(pop_mean - 2*se)))]
 
 pr =
   sim_values %>% 
@@ -1371,12 +1521,22 @@ pr =
            x = pop_mean + se, xend = pop_mean + se, y = 0, 
                yend = y_val1, linetype = "dashed", color = "darkgrey") + 
   annotate(geom = "label", x = pop_mean + se, y = 0.025, 
-           label = glue::glue("+1 SD (", round(se, 1), ")")) +
+           label = glue::glue("Mean + 1 SD")) +
   annotate(geom = "segment", x = pop_mean - se, 
            xend = pop_mean - se, y = 0, 
                yend = y_val2, linetype = "dashed", color = "darkgrey") + 
   annotate(geom = "label", x = pop_mean - se, y = 0.025, 
-           label = glue::glue("-1 SD (", round(se, 1), ")")) 
+           label = glue::glue("Mean - 1 SD")) +
+  annotate(geom = "segment", 
+           x = pop_mean + 2*se, xend = pop_mean + 2*se, y = 0, 
+               yend = y_val5, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean + 2*se, y = y_val5, vjust = 2,
+           label = glue::glue("Mean + 2 SD")) +
+  annotate(geom = "segment", x = pop_mean - 2*se, 
+           xend = pop_mean - 2*se, y = 0, 
+               yend = y_val6, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean - 2*se, y = y_val6, vjust = 2,
+           label = glue::glue("Mean - 2 SD"))
 
 
 
@@ -1386,7 +1546,7 @@ pr
 
 ---
 
-### Example 
+### Example: hypothesis testing
 
 And then add the value we observe (our sample mean) as a blue dot: 
 
@@ -1401,11 +1561,11 @@ pr +
 
 ---
 
-### Example 
+### Example: hypothesis testing
 
 ::: {.incremental}
-+ 
-If the population mean were really 60, is it plausible that we would see a sample mean this far from 60 just by chance?
+
++ If the population mean were really 60, is it plausible that we would see a sample mean this far from 60 just by chance?
 
 + We don’t care only about values that are higher than 60 or only lower than 60: either direction would make us doubt the hypothesis that the true mean is 60.
 
@@ -1416,7 +1576,7 @@ If the population mean were really 60, is it plausible that we would see a sampl
 
 ---
 
-### Example
+### Example: hypothesis testing
 
 ```{r 2 sided}
 #| cache: true 
@@ -1424,7 +1584,8 @@ If the population mean were really 60, is it plausible that we would see a sampl
 dens_df2 = 
   tibble(x = dens2$x,
          y = dens2$y)
-pr + 
+pr2 = 
+  pr + 
   geom_area(data = dens_df2 %>% filter(x <= opp),
             aes(x, y = y), alpha = 0.3,
             fill = "#0072B2") +
@@ -1437,43 +1598,68 @@ pr +
            size = 4) +
   annotate(geom = "point", x = opp,
             y = y_val4, color = "#0072B2", 
-           size = 4) 
+           size = 4) +
+  annotate(geom = "label", x = pop_mean + 2*se, y = y_val5, vjust = 2,
+           label = glue::glue("Mean + 2 SD")) +
+  annotate(geom = "label", x = pop_mean - 2*se, y = y_val6, vjust = 2,
+           label = glue::glue("Mean - 2 SD"))
   
+pr2
 ```
 
 ---
 
-### Example 
+### Example: hypothesis testing
 
-<span style="color:#0072B2;">Blue shaded area represents:</span>
 
-If the population mean is 60, how likely is it we would observe the sample mean we got? 
-
-```{r pnorm ex1}
-#| echo: true
+```{r add prob}
 #| cache: true
+pr3 = pr2 + 
+  annotate(geom = "segment",
+           x = 74, xend = 70, 
+           y = 0.03, yend = y_val5,
+            arrow = arrow(length = unit(0.1, "inches"), type = "closed"),
+           color = "#0072B2") +
+  annotate(geom = "text", 
+           x= 74, y = 0.04, label = "If population mean is 60,\nhow likely is it to see our sample mean (67)\nor larger?", color = "#0072B2") +
+  annotate(geom = "segment", 
+           x = 46, xend = 50, 
+           y = 0.03, yend = y_val6,
+            arrow = arrow(length = unit(0.1, "inches"), type = "closed"),
+           color = "#0072B2") +
+  annotate(geom = "text",
+           x = 46, y = 0.045,
+           label = "If population mean is 60,\nhow likely is it to see a value\nas far away from 60 as our sample mean\nin other direction (60 - 7 = 53)\nor smaller?", color = "#0072B2")
 
-2 * pnorm(60 - (sample_mean - 60), mean = 60, sd = sigma / sqrt(50)) * 100
+pr3 
+```
+
+---
+
+### Example: hypothesis testing
+
+```{r hypo final}
+#| cache: true
+pr3 +
+  annotate(geom = "text",
+           x = 75, y = 0.03,
+           label = "7%", color = "#0072B2",
+           size = 9) +
+  annotate(geom = "text",
+           x = 45, y = 0.028,
+           label = "7%", color = "#0072B2",
+           size = 9)
 
 ```
 
 ---
 
-### Example 
+### Example: hypothesis testing
 
-<span style="color:#0072B2;">Blue shaded area represents:</span>
+If our population mean is 60, the probability that we would get a sample mean of `r round(sample_mean, 1)` is 14\%. 
 
-If the population mean is 60, how likely is it we would observe the sample mean we got? 
+We conclude it's plausible the sample mean is 60
 
-```{r pnorm ex}
-#| echo: true
-#| cache: true
-
-2 * pnorm(60 - (sample_mean - 60), mean = 60, sd = sigma / sqrt(50)) * 100
-
-```
-
-We conclude it's plausible that our population mean is 60
 
 ---
 
@@ -1483,16 +1669,19 @@ Is it plausible that our population mean is 50?
 
 ---
 
-### Example
+### Example: hypothesis testing II
 
 Let's plot that hypothetical distribution as the pink curve: 
 
 
-```{r ex2}
+```{r ex2a}
 #| cache: true 
-sim_values = rnorm(100000, mean = 50, sd = sigma / sqrt(50)) %>% 
-  as_tibble()
+
 pop_mean = 50
+
+sim_values = rnorm(100000, mean = pop_mean, sd = sigma / sqrt(50)) %>% 
+  as_tibble()
+
 dens2 = density(sim_values$value)
 y_val = dens2$y[which.min(abs(dens2$x - (sample_mean)))]
 se = sigma / sqrt(50)
@@ -1501,13 +1690,17 @@ y_val2 = dens2$y[which.min(abs(dens2$x-(pop_mean - se)))]
 y_val3 = dens2$y[which.min(abs(dens2$x-sample_mean))]
 opp = pop_mean - (sample_mean - pop_mean)
 y_val4 = dens2$y[which.min(abs(dens2$x-opp))]
+y_val5 = dens2$y[which.min(abs(dens2$x-(pop_mean + 2*se)))]
+y_val6 = dens2$y[which.min(abs(dens2$x-(pop_mean - 2*se)))]
+y_val7 = dens2$y[which.min(abs(dens2$x-(pop_mean + 3*se)))]
+y_val8 = dens2$y[which.min(abs(dens2$x-(pop_mean - 3*se)))]
 
 pr =
   sim_values %>% 
   ggplot(aes(x = value)) + 
   geom_density(linewidth = 1.3, color = "#CC79A7") +
   labs(x = "Protein (g)", y = NULL, title = "Distribution of sample means") +
-  scale_x_continuous(breaks = seq(20, 100, 5)) +
+  scale_x_continuous(breaks = seq(30, 100, 5), limits = c(29, 71)) +
   scale_y_continuous(breaks = c(0)) +
   theme(axis.text.y = element_blank(),
         legend.position = "none",
@@ -1520,12 +1713,32 @@ pr =
            x = pop_mean + se, xend = pop_mean + se, y = 0, 
                yend = y_val1, linetype = "dashed", color = "darkgrey") + 
   annotate(geom = "label", x = pop_mean + se, y = 0.025, 
-           label = glue::glue("+1 SD (", round(se, 1), ")")) +
+           label = glue::glue("Mean + 1 SD")) +
   annotate(geom = "segment", x = pop_mean - se, 
            xend = pop_mean - se, y = 0, 
                yend = y_val2, linetype = "dashed", color = "darkgrey") + 
   annotate(geom = "label", x = pop_mean - se, y = 0.025, 
-           label = glue::glue("-1 SD (", round(se, 1), ")")) 
+           label = glue::glue("Mean - 1 SD")) +
+  annotate(geom = "segment", 
+           x = pop_mean + 2*se, xend = pop_mean + 2*se, y = 0, 
+               yend = y_val5, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean + 2*se, y = y_val5, vjust = 2,
+           label = glue::glue("Mean + 2 SD")) +
+  annotate(geom = "segment", x = pop_mean - 2*se, 
+           xend = pop_mean - 2*se, y = 0, 
+               yend = y_val6, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean - 2*se, y = y_val6, vjust = 2,
+           label = glue::glue("Mean - 2 SD"))+
+   annotate(geom = "segment", 
+           x = pop_mean + 3*se, xend = pop_mean + 3*se, y = 0, 
+               yend = y_val7, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean + 3*se, y = y_val7 +.001,
+           label = glue::glue("Mean + 3 SD")) +
+  annotate(geom = "segment", x = pop_mean - 3*se, 
+           xend = pop_mean - 3*se, y = 0, 
+               yend = y_val8, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean - 3*se, y = y_val8+.001, 
+           label = glue::glue("Mean - 3 SD"))
 
 
 
@@ -1535,11 +1748,11 @@ pr
 
 ---
 
-### Example 
+### Example: hypothesis testing II
 
 And then add the value we observe (our sample mean) as a blue dot: 
 
-```{r add mean2}
+```{r add mean2a}
 #| cache: true 
 pr + 
    annotate(geom = "point", 
@@ -1551,17 +1764,18 @@ pr +
 ---
 
 
-### Example
+### Example: hypothesis testing II
 
 Recall we care about the probabilities on both sides 
 
-```{r 2 sided2}
+```{r 2 sided2a}
 #| cache: true 
 
 dens_df2 = 
   tibble(x = dens2$x,
          y = dens2$y)
-pr + 
+pr2 = 
+  pr + 
   geom_area(data = dens_df2 %>% filter(x <= opp),
             aes(x, y = y), alpha = 0.3,
             fill = "#0072B2") +
@@ -1574,41 +1788,49 @@ pr +
            size = 4) +
   annotate(geom = "point", x = opp,
             y = y_val4, color = "#0072B2", 
-           size = 4) 
+           size = 4) +
+  annotate(geom = "label", x = pop_mean + 2*se, y = y_val5, vjust = 2,
+           label = glue::glue("Mean + 2 SD")) +
+  annotate(geom = "label", x = pop_mean - 2*se, y = y_val6, vjust = 2,
+           label = glue::glue("Mean - 2 SD"))+
+  annotate(geom = "label", x = pop_mean + 3*se, y = y_val7 +.001,
+           label = glue::glue("Mean + 3 SD")) +
+  annotate(geom = "label", x = pop_mean - 3*se, y = y_val8+.001, 
+           label = glue::glue("Mean - 3 SD"))
+
+pr2
   
 ```
 
 ---
 
-### Example 
+### Example: hypothesis testing II
 
-<span style="color:#0072B2;">Blue shaded area represents:</span>
+Recall we care about the probabilities on both sides 
 
-If the population mean is 50, how likely is it we would observe the sample mean we got? 
-
-```{r pnorm ex1a}
-#| echo: true
+```{r hypo3}
 #| cache: true
 
-2 * pnorm(50 - (sample_mean - 50), mean = 50, sd = sigma / sqrt(50)) * 100
+pr2 +
+  annotate(geom = "text",
+           x = 71, y = 0,vjust = -1, hjust = 1,
+           label = "0.02%", color = "#0072B2",
+           size = 9) +
+  annotate(geom = "text",
+           x = 32.5, y = 0,vjust = -1, hjust = 1,
+           label = "0.02%", color = "#0072B2",
+           size = 9) 
 
 ```
 
+
+
 ---
 
-### Example 
+### Example: hypothesis testing II
 
-<span style="color:#0072B2;">Blue shaded area represents:</span>
+If our population mean is 50, the probability that we would get a sample mean of `r round(sample_mean, 1)` is <1\%. 
 
-If the population mean is 50, how likely is it we would observe the sample mean we got? 
+We conclude it's unlikely the population mean is 50, based on the sample we took.
 
-```{r pnorm ex2a}
-#| echo: true
-#| cache: true
 
-2 * pnorm(50 - (sample_mean - 50), mean = 50, sd = sigma / sqrt(50)) * 100
-
-```
-
-We conclude it's **not** plausible that our population mean is 50
----
