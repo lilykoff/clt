@@ -52,4 +52,27 @@ lab_df = sjlabelled::label_to_colnames(demo_trans) %>%
 
 write_rds(lab_df, here::here("data", "processed", "demo_2001.rds"))
 
+bmx_2001 = read_xpt(here::here("data/raw/nhanes_2001_bmx.xpt"))
+bmx_trans = nhanesTranslate(nh_table = "BMX_B", data = bmx_2001)
 
+lab_df = sjlabelled::label_to_colnames(bmx_trans) %>% 
+  janitor::clean_names()
+
+write_rds(lab_df, here::here("data", "processed", "bmx_2001.rds"))
+
+
+bmx_2021 = read_xpt(here::here("data/raw/nhanes_2021_bmx.xpt"))
+bmx_trans = nhanesTranslate(nh_table = "BMX_L", data = bmx_2021)
+
+lab_df = sjlabelled::label_to_colnames(bmx_trans) %>% 
+  janitor::clean_names()
+
+write_rds(lab_df, here::here("data", "processed", "bmx_2021.rds"))
+
+bpx_2021 = read_xpt(here::here("data/raw/nhanes_2021_bpx.xpt"))
+bpx_trans = nhanesTranslate(nh_table = "BPXO_L", data = bpx_2021)
+
+lab_df = sjlabelled::label_to_colnames(bpx_trans) %>% 
+  janitor::clean_names()
+
+write_rds(lab_df, here::here("data", "processed", "bpx_2021.rds"))

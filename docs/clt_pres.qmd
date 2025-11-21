@@ -22,11 +22,13 @@ format:
     height: 850
     html-math-method: mathjax
     embed-resources: true
+    self-contained: true
 code: 
   echo: false
   cache: true 
 editor_options: 
   chunk_output_type: console
+  
 ---
 
 ```{r load packages}
@@ -35,7 +37,10 @@ library(tidyverse)
 library(showtext)
 library(ggplot2)
 library(usmap)
-
+library(emoGG)
+library(viridis)
+library(cowplot)
+library(geomtextpath)
 ```
 
 ```{r ggplot theme}
@@ -73,95 +78,1537 @@ scale_fill_okabe  <- function(...) scale_fill_manual(values = okabe_ito, ...)
 #| cache: true
 #| include: false 
 
+
 nh_data = read_rds(here::here("data", "processed", "nhanes_all.rds")) %>% 
   mutate(year = if_else(grepl("NHANES 2001-2002", data_release_cycle), "2001", "2023"))
+
+bmx_21 = read_rds(here::here("data", "processed", "bmx_2021.rds"))
+
+demo_21 = read_rds(here::here("data", "processed", "demo_2021.rds"))
+
+bp = read_rds(here::here("data", "processed", "bpx_2021.rds"))
+
+bmx_joined = bmx_21 %>% 
+  left_join(demo_21, by = "respondent_sequence_number") %>% 
+  left_join(bp, by = "respondent_sequence_number")
+
+protein_df23 = nh_data %>% 
+  filter(year == 2023) %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  filter(!is.na(protein_gm), !is.nan(protein_gm))
+
+# write_csv(protein_df23, here::here("docs", "protein_df.csv"))
+
+inc_df = 
+  bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  filter(!is.na(ratio_of_family_income_to_poverty)) %>% 
+  rename(ratio = ratio_of_family_income_to_poverty)
+
+# write_csv(inc_df, here::here("docs", "income_df.csv"))
+
+protein_values = protein_df23$protein_gm
+
+xmean = mean(protein_df23$protein_gm, na.rm = TRUE)
+xmed = median(protein_df23$protein_gm, na.rm = TRUE)
+xsd = sd(protein_df23$protein_gm, na.rm = TRUE)
+
+x_25 = quantile(protein_df23$protein_gm, 0.25, na.rm = TRUE)
+x_75 = quantile(protein_df23$protein_gm, 0.75, na.rm = TRUE)
+
+# --- emoji df ---- # 
+pop = tibble(expand_grid(x = 1:20, 
+                         y = 1:20)) %>% 
+  mutate(row = row_number())
+
+emoji_df = 
+  tibble(descrip = c("santa", "running_man", "policeman", "boy", "man",
+                     "girl", "woman", "mrs_claus", "princess", "dancer"),
+         code = c("1f385", "1f3c3", "1f46e", "1f466", "1f468", "1f467", 
+                  "1f469", "1f936", "1f478", "1f483"))
+  
+
+pop = pop %>% 
+  mutate(emoji = sample(emoji_df$descrip, size = n(), replace = TRUE))
+set.seed(456)
+pop_small = pop %>% slice_sample(n = 35, replace = FALSE)
+
+# --- fake protein data ---- # 
+# make some fake protein data 
+set.seed(3434)
+protein_fake = 
+  expand_grid(x = 1:20,
+              y = 1:20) %>% 
+  mutate(id = row_number(),
+         protein = rnorm(n = n(), mean = 80, sd = 20))
+
+set.seed(3434)
+sample1 = protein_fake %>% 
+  slice_sample(n = 35) 
+set.seed(3435)
+sample2 = protein_fake %>% 
+  slice_sample(n = 35) 
+set.seed(3436)
+sample3 = protein_fake %>% 
+  slice_sample(n = 35) 
+
+# sample means 
+set.seed(457)
+means = replicate(1000, 
+                  mean(sample(protein_fake$protein, size = 35, replace = FALSE)))
+  
+set.seed(457)
+means_50 = replicate(1000, 
+                  mean(sample(protein_fake$protein, size = 50, replace = FALSE)))
+set.seed(457)
+means_100 = replicate(1000, 
+                  mean(sample(protein_fake$protein, size = 100, replace = FALSE)))
+set.seed(457)
+means_15 = replicate(1000, 
+                  mean(sample(protein_fake$protein, size = 15, replace = FALSE)))
+  
 ```
 
 
-# Motivating question 
+## Motivating question 
 
 Do Americans consume more protein today than 20 years ago? 
+
+We will use the Central Limit Theorem (CLT) to help us answer this question.
+
+---
+
+
+## Definitions 
+
++ Mean: average, center of data
+
+$$\mathrm{mean}(x, y) = \frac{x + y}{2}$$
++ Standard deviation (sd): measure of spread of data around the mean
+
+$$\mathrm{sd}(x, y) = \sqrt{\frac{(x- mean(x,y))^2 + (y-mean(x,y))^2}{2-1}} $$
++ Distribution: describes data (shape, center, spread) 
+
+---
+
+## The Normal Distribution (bell curve) 
+
+
+```{r normal dist}
+#| cache: true 
+
+
+p_normal = 
+  ggplot(data = tibble(x = c(-3, 3)), aes(x)) +
+  geom_area(stat = "function", fun = dnorm, args = list(mean = 0, sd = 1), 
+            xlim = c(-3, 3), fill = "#56B4E9", alpha = 0.5) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1) +
+  theme(axis.text.y = element_blank())+
+  labs(y = NULL, x = NULL) +
+  scale_x_continuous(breaks = seq(-3, 3, 1))
+
+p_normal 
+```
+
+
+# Where have you seen this before in real life? 
+
+---
+
+### Height 
+
+```{r height dist}
+#| cache: true 
+
+
+bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  mutate(height_in = standing_height_cm / 2.54) %>% 
+  ggplot(aes(x = height_in, color = gender, fill = gender)) + 
+  facet_wrap(.~gender, scales = "free") + 
+  geom_density(linewidth = 1.3, alpha = 0.5) + 
+  scale_color_manual(values = c("#009E73","#CC79A7")) +
+  scale_fill_manual(values = c("#009E73","#CC79A7")) +
+  scale_x_continuous(breaks=seq(54, 78, 3),
+                     labels = seq(4.5, 6.5, 0.25)) + 
+  labs(x = "Height (ft)", y = "Number of people", title = "Height among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
+
+```
+
+---
+
+### Heart rate 
+
+```{r bp distribution}
+#| cache: true 
+
+p = bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  rename(Diastolic = diastolic_1st_oscillometric_reading,
+         Systolic = systolic_1st_oscillometric_reading) %>% 
+  pivot_longer(cols = c(Diastolic, Systolic), 
+               names_to = "type",
+               values_to = "bp") %>% 
+  ggplot(aes(x = bp, color = type)) + 
+  scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+  facet_wrap(.~type, scales = "free") + 
+  geom_density(linewidth = 1.3) + 
+  scale_x_continuous(breaks=seq(30, 300, 10)) +
+  labs(x = "Blood Pressure (mmHg)", y = "Number of people", title = "Blood Pressure among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
+
+
+bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  ggplot(aes(x = pulse_1st_oscillometric_reading)) +
+  geom_density(linewidth = 1.3, color = "black", fill = "#56B4E9", alpha= 0.5) + 
+  scale_x_continuous(breaks=seq(30, 300, 10)) +
+  labs(x = "Pulse (beats per minute)", y = "Number of people", title = "Heart Rate among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
+
+# The Normal distribution describes many natural, social, and biological processes. It’s   symmetric, most values are near the mean, and extreme values are rare.
+```
+
+---
+
+## What's special about the Normal distribution? 
+
+
+```{r normal1}
+#| cache: true 
+
+shade_df1 = tibble(
+  x = seq(-1, 1, length.out = 500),
+  y = dnorm(seq(-1, 1, length.out = 500), mean = 0, sd = 1)
+)
+
+shade_df2 = tibble(
+  x = seq(-2, 2, length.out = 500),
+  y = dnorm(seq(-2, 2, length.out = 500), mean = 0, sd = 1)
+)
+
+shade_df3 = tibble(
+  x = seq(-3, 3, length.out = 500),
+  y = dnorm(seq(-3, 3, length.out = 500), mean = 0, sd = 1)
+)
+
+pn_1 = ggplot(data = tibble(x = c(-3, 3)), aes(x)) +
+  geom_area(data = shade_df1, aes(x = x, y = y),
+            fill = "#E69F00", alpha = 0.5) +
+  annotate(geom = "label",
+           x = 0, y = 0.3, color = "#E69F00",
+           label = "68% of data") +
+  theme(axis.text.y = element_blank()) +
+  labs(y = NULL, x = NULL) +
+  stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
+                linewidth = 1.1) +
+  scale_x_continuous(breaks = seq(-3, 3, 1))
+
+
+pn_1 
+```
+
+---
+
+## What's special about the Normal distribution? 
+
+```{r normal2}
+#| cache: true 
+
+
+pn_2 = 
+  pn_1 + 
+  geom_area(data = shade_df2, aes(x = x, y = y),
+            fill = "#D55E00", alpha = 0.5) +
+  annotate(geom = "label",
+           x =0, y = 0.2, color = "#D55E00",
+           label = "95% of data") +
+  stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
+                linewidth = 1.1) 
+
+
+pn_2 
+```
+
+---
+
+
+## What's special about the Normal distribution? 
+
+```{r normal 3}
+#| cache: true 
+
+
+pn_3 = pn_2 +
+  geom_area(data = shade_df3, aes(x = x, y = y),
+            fill = "#F0E442", alpha = 0.5) +
+  annotate(geom = "label",
+         x = 0, y = 0.1, color = "#F0E442",
+           label = "99.7% of data") +
+  stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
+                linewidth = 1.1) 
+
+
+
+pn_3
+```
+
+---
+
+
+## A little bit of notation 
+
+```{r notation 1}
+#| cache: true
+
+
+pn_3 + 
+  geom_vline(aes(xintercept = 0), linetype = "dashed") +
+  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0") 
+```
+
+---
+
+
+## A little bit of notation 
+
+```{r notation 2}
+#| cache: true
+
+pn_3 + 
+  geom_vline(aes(xintercept = 0), linetype = "dashed") +
+  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0") +
+  annotate(geom = "segment", x = 0.5, xend = 1, y = 0.05, yend = 0.05, linetype = "dashed",
+               arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
+  annotate(geom = "segment", x = 0.5, xend = 0, y = 0.05, yend = 0.05, linetype = "dashed",
+               arrow = arrow(length = unit(0.1, "inches"), type = "closed")) + 
+  annotate(geom = "label", x = 0.5, y = 0.05, label = "Standard Deviation (sd) = 1",
+           vjust = 1.5)
+  
+```
+
+---
+
+## A little bit of notation 
+
+```{r notation 3}
+#| cache: true
+
+pn_3 + 
+  geom_vline(aes(xintercept = 0), linetype = "dashed") +
+  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0") +
+  annotate(geom = "segment", x = 0.5, xend = 1, y = 0.05, yend = 0.05, linetype = "dashed",
+               arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
+  annotate(geom = "segment", x = 0.5, xend = 0, y = 0.05, yend = 0.05, linetype = "dashed",
+               arrow = arrow(length = unit(0.1, "inches"), type = "closed")) + 
+  annotate(geom = "label", x = 0.5, y = 0.05, label = "Standard Deviation (sd) = 1",
+           vjust = 1.5) +
+  annotate(geom = "label", x = 1.5, y = 0.3, size = 10,
+           label = "X ~ N(mean = 0, sd = 1)")
+  
+```
+
+
+
+# If we know data are Normally distributed, we can make statements about the values in the distribution
+
+E.g.: "how unusual is this value?" 
 
 
 ---
 
-##  Option 1: collect data from everyone in the US 
+### How unusual is my height? 
 
-```{r us counties}
+
+```{r unusual 1}
 #| cache: true 
+values = bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18, gender == "Female") %>% 
+  mutate(height_in = standing_height_cm / 2.54) %>% 
+  select(height_in) %>% 
+  drop_na() %>% 
+  pull()
+dens = density(values)
+y_val = dens$y[which.min(abs(dens$x - (5*12)))]
+mean_ht = mean(values)
+sd_ht = sd(values, na.rm = TRUE)
 
 
 p = 
-  plot_usmap(data = countypop,
-           values = "pop_2022",
-           color = "#444444") +
-  scale_fill_viridis_c(option = "B",
-                       trans = "log",
-                       name = "Population (2023)",
-                       label = scales::comma) + theme(legend.position = "none")
+  bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18, gender == "Female") %>% 
+  mutate(height_in = standing_height_cm / 2.54) %>% 
+  ggplot(aes(x = height_in)) + 
+  geom_density(linewidth = 1.3, color = "#CC79A7") + 
+  scale_x_continuous(breaks=seq(54, 78, 3),
+                     labels = seq(4.5, 6.5, 0.25),
+                     limits = c(52, 76)) + 
+  scale_y_continuous(breaks = c(0)) +
+  labs(x = "Height (ft)", y = "Number of people", title = "Height among American female adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey")  +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) 
 
-#56B4E9
 
-p = plot_usmap(fill = "#56B4E9",
-           color = "#444444",
-           regions = "counties",
-           linewidth = 0.2) 
 
 p
 
 ```
 
-##  Option 2: take a sample
+---
 
-```{r sampled counties}
+### How unusual is my height? 
+
+```{r unusual2}
+#| cache: true 
+p2 = p + 
+  geom_labelvline(aes(xintercept = mean_ht), linetype = "dashed",
+                  label = "Mean", angle = 90, color = "darkgrey") + 
+  geom_textvline(aes(xintercept = mean_ht - sd_ht), linetype = "dotted",
+                      label = "-1 SD", color = "darkgrey") + 
+  geom_textvline(aes(xintercept = mean_ht + sd_ht), linetype = "dotted",
+                      label = "+1 SD", color = "darkgrey") + 
+  geom_textvline(aes(xintercept = mean_ht - 2*sd_ht), linetype = "dotted",
+                      label = "-2 SD", color = "darkgrey") + 
+  geom_textvline(aes(xintercept = mean_ht + 2*sd_ht), linetype = "dotted",
+                      label = "+2 SD", color = "darkgrey") + 
+  geom_textvline(aes(xintercept = mean_ht - 3*sd_ht), linetype = "dotted",
+                      label = "-3 SD", color = "darkgrey") + 
+  geom_textvline(aes(xintercept = mean_ht + 3*sd_ht), linetype = "dotted",
+                      label = "+3 SD", color = "darkgrey") + 
+  annotate(geom = "label", x = 6*12, y = 0.12, label = expression(Height~ "~" ~ N(5.27, 0.23^2)), parse = TRUE)
+
+p2
+```
+
+---
+
+### How unusual is my height? 
+
+```{r unusual3}
+#| cache: true 
+p3 = p2 +
+  annotate(geom = "point", 
+           x = (5*12), y = y_val, color = "#0072B2", 
+           size = 4)
+
+p3
+```
+
+
+---
+
+### How unusual is my height? 
+
+```{r unusual4}
+#| cache: true 
+dens_df = 
+  tibble(x = dens$x, 
+         y = dens$y)
+p4 = 
+  p3 + 
+  geom_area(data = dens_df %>% filter(x <= 60),
+            aes(x, y = y), alpha = 0.3, inherit.aes = F,
+            fill = "#0072B2") +
+  annotate(geom = "label", x = 4.75 * 12, y = 0.025, vjust = 0,
+           label = "Probability of height < 5 ft", color = "#0072B2") +
+  annotate(geom = "curve",
+           x = 4.65 * 12, y = 0.026, 
+           xend = 4.9 * 12, yend = 0.01,
+           curvature = 0.2,  
+           arrow = arrow(length = unit(0.1, "inches"), type = "closed"),
+           color = "#0072B2") +
+  geom_density(linewidth = 1.3, color = "#CC79A7") 
+
+p4
+```
+
+---
+
+### How unusual is my height? 
+
+```{r unusual5}
+#| cache: true 
+p4 +
+  annotate(geom = "text", x = 5.125 * 12, y = 0.13,
+           label = "34%", angle = 30) +
+  annotate(geom = "text", x = 5.42 * 12, y = 0.13,
+           label = "34%", angle = -35) +
+  annotate(geom = "text", x = 5.625 * 12, y = 0.065,
+           label = "13.5%", angle = -35) +
+  annotate(geom = "text", x = 5.85 * 12, y = 0.02,
+           label = "2.5%", angle = -10) +
+  annotate(geom = "text", x = 4.9 * 12, y = 0.06,
+           label = "13.5%", angle = 35) +
+  annotate(geom = "text", x = 4.65 * 12, y = 0.015,
+           label = "2.5%", angle = 10) 
+  
+```
+
+
+---
+
+### How unusual is my height? 
+
+<div style="font-size: 2.5em;">
+
+```{r unusual 6}
+#| echo: true 
+
+2.5 + 13.5 
+
+pnorm(5, mean = 5.27, sd = 0.23) * 100
+```
+
+</div>
+
+# But often, data in the real world aren't Normal 
+
+---
+
+### Weight 
+
+```{r weight}
+#| cache: true 
+
+bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  mutate(weight_lbs = weight_kg * 2.2) %>% 
+  ggplot(aes(x = weight_lbs, color = gender, fill = gender)) + 
+  facet_wrap(.~gender, scales = "free") + 
+  geom_density(linewidth = 1.3, alpha = 0.5) + 
+  scale_color_manual(values = c("#009E73","#CC79A7")) +
+  scale_fill_manual(values = c("#009E73","#CC79A7")) +
+  scale_x_continuous(breaks=seq(100, 500, 50)) +
+  labs(x = "Weight (lbs)", y = NULL, title = "Weight among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
+```
+
+---
+
+### Household size 
+
+```{r hh size}
+#| cache: true 
+
+bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  ggplot(aes(x = total_number_of_people_in_the_household)) + 
+  geom_histogram(binwidth = 1,
+                 fill = "#56B4E9", alpha = 0.5, color = "black") +
+  scale_x_continuous(breaks=seq(0, 10, 1)) +
+  labs(x = "Number of people in houeshold", y = "Number of households", title = "Household size among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
+```
+
+---
+
+### Poverty 
+
+```{r poverty}
 #| cache: true 
 
 
-set.seed(123)
-highlight_fips = sample(countypop$fips, 100)
-
-countypop = 
-  countypop %>%
-  mutate(highlight = if_else(fips %in% highlight_fips, "highlight", "normal"))
-
-plot_usmap(data = countypop,
-           values = "highlight",
-           color = "#444444",
-           linewidth = 0.2) +
-  scale_fill_manual(values = c("normal" = "lightgrey", "highlight" = "#56B4E9")) +
-  theme(legend.position = "none")
+bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  ggplot(aes(x = ratio_of_family_income_to_poverty)) + 
+  geom_density(linewidth = 1.3, fill = "#56B4E9", alpha = 0.5)  +
+  scale_x_continuous(breaks=seq(0, 10, 1)) +
+  labs(x = "Ratio of family income to poverty level", y = "Number of families", title = "Income among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
 ```
 
 ---
 
-## Sampling
+### Protein 
+
+```{r protein}
+#| cache: true 
+p_sex = nh_data %>% 
+  filter(age_in_years_at_screening >= 18,
+         year == 2023) %>% 
+  ggplot(aes(x = protein_gm, color = gender, fill = gender)) + 
+  geom_density(linewidth = 1.3, alpha = 0.5)  +
+  facet_wrap(.~gender) + 
+  scale_color_manual(values = c("#009E73","#CC79A7")) +
+  scale_fill_manual(values  = c("#009E73","#CC79A7")) +
+  scale_x_continuous(breaks=seq(0, 500, 25),
+                     limits = c(0, 500)) +
+  labs(x = "Protein intake (g)", y = NULL, title = "Protein intake among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        axis.text.x= element_text(angle = 45)) 
+
+nh_data %>% 
+  filter(age_in_years_at_screening >= 18,
+         year == 2023) %>% 
+  ggplot(aes(x = protein_gm)) + 
+  geom_density(linewidth = 1.3, alpha = 0.5, fill ="#56B4E9", color = "black")  +
+  scale_x_continuous(breaks=seq(0, 600, 25),
+                     limits = c(0, 600)) +
+  labs(x = "Protein intake (g)", y = NULL, title = "Protein intake among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        axis.text.x= element_text(angle = 45)) 
+```
+
+
+# What about the mean of samples from non-Normal data? 
+
+---
+
+### Protein data: means 
+
+```{r protein pop1}
+#| cache: true 
+
+xy_df = expand_grid(x = 1:71, y = 1:71) %>% 
+  slice(1:nrow(protein_df23))
+
+dots = 
+  protein_df23 %>% 
+  bind_cols(xy_df) %>% 
+  ggplot(aes(x, y, color = protein_gm)) + 
+  geom_point(size = 0.5) + 
+  coord_equal() +
+  theme_void() +
+  scale_color_viridis(option = "B", name = "Protein (g)",
+                      limits = c(0, 350)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Population of protein values (N=4986)") + 
+  annotate(geom = "label", size = 4,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Mean = ", round(mean(protein_df23$protein_gm), 0), " g"),
+           fill = "white")
+
+plot_grid(dots, NULL, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+
+## represent our data  points
+## take a sample 
+# show the mean x 3 
+# then show the sampling distribution 
+```
+
+---
+
+### Protein data: means 
+
+```{r protein samp1}
+#| cache: true 
+
+set.seed(123)
+sample = protein_df23 %>% 
+  bind_cols(xy_df) %>% 
+  slice_sample(n = 50, replace = FALSE)
+
+samp_protein = 
+  protein_df23 %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(data = sample, aes(color = protein_gm), size = 0.5) + 
+  theme_void() +
+  coord_equal() + 
+  scale_color_viridis(option = "B", name = "Protein (g)",
+                      limits = c(0, 350)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Sample of protein values (n=50)") + 
+  annotate(geom = "label", size = 4,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Sample mean = ", round(mean(sample$protein_gm), 0), " g"),
+           fill = "white")
+
+
+plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+```
+
+---
+
+### Protein data: means 
+
+```{r protein samp2}
+#| cache: true 
+
+set.seed(1234)
+sample = protein_df23 %>% 
+  bind_cols(xy_df) %>% 
+  slice_sample(n = 50, replace = FALSE)
+
+samp_protein = 
+  protein_df23 %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(data = sample, aes(color = protein_gm), size = 0.5) + 
+  theme_void() +
+  coord_equal() + 
+  scale_color_viridis(option = "B", name = "Protein (g)",
+                      limits = c(0, 350)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Sample of protein values (n=50)") + 
+  annotate(geom = "label",
+           x = 71 / 2, y = 71 / 2, size = 4,
+           label = glue::glue("Sample mean = ", round(mean(sample$protein_gm), 0), " g"),
+           fill = "white")
+
+
+plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+```
+
+---
+
+### Protein data: means 
+
+```{r protein samp3}
+#| cache: true 
+
+set.seed(12345)
+sample = protein_df23 %>% 
+  bind_cols(xy_df) %>% 
+  slice_sample(n = 50, replace = FALSE)
+
+samp_protein = 
+  protein_df23 %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(data = sample, aes(color = protein_gm), size = 0.5) + 
+  theme_void() +
+  coord_equal() + 
+  scale_color_viridis(option = "B", name = "Protein (g)",
+                      limits = c(0, 350)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Sample of protein values (n=50)") + 
+  annotate(geom = "label", size = 4,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Sample mean = ", round(mean(sample$protein_gm), 0), " g"),
+           fill = "white")
+
+
+plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+```
+
+# What do we think the distribution of the sample means might look like? 
+Center, spread, shape? 
+
+---
+
+### Obtain 500 sample means from samples of size 50
+
+<div style="font-size: 2.5em;">
+
+```{r sample}
+#| echo: true 
+
+sample_means =
+  replicate(500, mean(sample(
+    protein_values,
+    size = 50, 
+    replace = FALSE
+  )))
+
+```
+</div>
+
+---
+
+### Obtain 500 sample means from samples of size 50
+
+```{r samp means plot}
+#| cache: true 
+
+sample_means %>% 
+  as_tibble() %>% 
+  ggplot(aes(x = value)) + 
+  geom_density(linewidth = 1.3, fill = "#56B4E9", alpha = 0.5) +
+  scale_x_continuous(breaks=seq(60, 90, 5)) +
+  labs(x = "Mean protein (g)", y = NULL, title = "Distribution of 500 sample means", subtitle = "From samples of size 50") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none")
+
+```
+
+---
+
+
+```{ojs}
+data = FileAttachment("protein_df.csv").csv({ typed: true })
+
+viewof sample_size = Inputs.range(
+  [2, 100], 
+  {value: 50, step: 1, label: "Sample size:"}
+)
+
+//viewof n_samples = Inputs.range(
+//  [10, 1000], 
+  //{value: 500, step: 10, label: "Number samples:"}
+//)
+
+sample_means = {
+  // Dependency tracking: re-run when these change
+  sample_size;
+  
+  // Safety check: ensure data is loaded
+  if (!data || data.length === 0) return [];
+  
+  // Safety check: ensure column exists (Case Sensitive!)
+  if (typeof data[0].protein_gm === "undefined") {
+    return ["Error: Column 'protein' not found in data"];
+  }
+
+  const means = [];
+  // Create a local copy of the array to shuffle
+  // We do this inside the loop or use a specific shuffler to ensure 
+  // we are sampling from the full population every time.
+  const popArray = Array.from(data); 
+
+  for (let i = 0; i < 500; i++) {
+    // 1. Shuffle a clean copy of the population
+    // 2. Slice the first n elements (Sampling WITHOUT replacement)
+    const sample = d3.shuffle([...popArray]).slice(0, sample_size);
+
+    // 3. Compute mean
+    const m = d3.mean(sample, d => d.protein_gm);
+    means.push(m);
+  }
+
+  return means;
+}
+
+normalCurve = {
+  if (sample_means.length < 2 || !data) return [];
+  
+  // 1. Get Population Statistics
+  const popMean = d3.mean(data, d => d.protein_gm);
+  const popSD = d3.deviation(data, d => d.protein_gm);
+  
+  // 2. Calculate Standard Error (The predicted width of the sampling distribution)
+  // Formula: Population SD / sqrt(n)
+  const se = popSD / Math.sqrt(sample_size2);
+
+  // 3. Determine range for the curve (centered on popMean)
+  const minX = popMean - (4 * se);
+  const maxX = popMean + (4 * se);
+  
+  // Create a smooth grid of X values
+  const grid = d3.range(minX, maxX, (maxX - minX) / 200);
+  
+  // Normal Density Function using Population Mean and Standard Error
+  const pdf = (x) => (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - popMean) / se, 2));
+  
+  return grid.map(x => ({x: x, y: pdf(x)}));
+}
+
+// 6. PLOT
+{
+  const bins = d3.bin().thresholds(20)(sample_means);
+  const n = sample_means.length;
+
+  return Plot.plot({
+    width: 900,
+    height: 500,
+    caption: `Distribution of sample means (n=${sample_size2})`,
+    
+    // Global font style
+    style: {
+      fontSize: "18px",
+      overflow: "visible" 
+    },
+    marginLeft: 60,
+    marginBottom: 60,
+    marginTop: 30,
+
+    // DEFINE LEGEND COLORS
+    color: {
+      domain: ["Sample Mean", "Population Mean", "Normal Curve"],
+      range: ["#D55E00", "black", "#CC79A7"],
+      legend: true
+    },
+    marks: [
+      // Histogram (Manual Density Calculation)
+      Plot.rectY(bins, {
+        x1: "x0", 
+        x2: "x1", 
+        // Density Formula: Count / (Total Samples * Bin Width)
+        y: d => d.length / (n * (d.x1 - d.x0)), 
+        fill: "#56B4E9", 
+        fillOpacity: 0.5,
+        tip: true,
+        title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
+      }),
+      
+      // The Normal Curve Overlay
+      Plot.line(normalCurve, {
+        x: "x",
+        y: "y",
+        stroke: () => "Normal Curve",
+        strokeWidth: 3
+      }),
+
+      // The Mean of the Sampling Distribution (Red Line)
+      Plot.ruleX([d3.mean(sample_means)], { 
+        stroke: () => "Sample Mean", 
+        strokeWidth: 3,
+        title: d => `Sample Mean: ${d.toFixed(2)}` 
+      }),
+      
+      // The True Population Mean (Black dashed line)
+      data && data.length > 0 ? Plot.ruleX([d3.mean(data, d => d.protein_gm)], { 
+        stroke: () => "Population Mean", 
+        strokeDasharray: "4,4",
+        strokeWidth: 2,
+        opacity: 0.8,
+        title: d => `True Pop Mean: ${d.toFixed(2)}`
+      }) : null
+    ],
+    
+    // AXIS CONFIGUprotein_gmN
+    x: { 
+      label: "Protein (sample mean)", 
+      tickFormat: ".1f",
+      labelOffset: 50
+    },
+    y: { 
+      label: "Density", 
+    }
+  })
+}
+
+```
+
+---
+
+## What if our population distribution looks really weird? 
+
+```{r poverty 2}
+#| cache: true 
+
+
+bmx_joined %>% 
+  filter(age_in_years_at_screening >= 18) %>% 
+  ggplot(aes(x = ratio_of_family_income_to_poverty)) + 
+  geom_density(linewidth = 1.3, fill = "#56B4E9", alpha = 0.5)  +
+  scale_x_continuous(breaks=seq(0, 10, 1)) +
+  labs(x = "Ratio of family income to poverty level", y = NULL, title = "Income among American adults",
+       subtitle = "From the 2021 National Health and Nutrition Examination Survey") +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none") 
+```
+
+
+---
+
+```{ojs}
+data2 = FileAttachment("income_df.csv").csv({ typed: true })
+
+viewof sample_size2 = Inputs.range(
+  [2, 100], 
+  {value: 50, step: 1, label: "Sample size:"}
+)
+
+//viewof n_samples = Inputs.range(
+//  [10, 1000], 
+  //{value: 500, step: 10, label: "Number samples:"}
+//)
+
+sample_means2 = {
+  // Dependency tracking: re-run when these change
+  sample_size2;
+  
+  // Safety check: ensure data is loaded
+  if (!data2 || data2.length === 0) return [];
+  
+  // Safety check: ensure column exists (Case Sensitive!)
+  if (typeof data2[0].ratio === "undefined") {
+    return ["Error: Column 'ratio' not found in data"];
+  }
+
+  const means = [];
+  // Create a local copy of the array to shuffle
+  // We do this inside the loop or use a specific shuffler to ensure 
+  // we are sampling from the full population every time.
+  const popArray = Array.from(data2); 
+
+  for (let i = 0; i < 500; i++) {
+    // 1. Shuffle a clean copy of the population
+    // 2. Slice the first n elements (Sampling WITHOUT replacement)
+    const sample = d3.shuffle([...popArray]).slice(0, sample_size2);
+
+    // 3. Compute mean
+    const m = d3.mean(sample, d => d.ratio);
+    means.push(m);
+  }
+
+  return means;
+}
+
+
+// 5. CALCULATE NORMAL CURVE (THEORETICAL)
+// We now generate the curve based on the Population Parameters, not the sample.
+// This shows the Theoretical prediction of the CLT.
+normalCurve2 = {
+  if (sample_means2.length < 2 || !data2) return [];
+  
+  // 1. Get Population Statistics
+  const popMean = d3.mean(data2, d => d.ratio);
+  const popSD = d3.deviation(data2, d => d.ratio);
+  
+  // 2. Calculate Standard Error (The predicted width of the sampling distribution)
+  // Formula: Population SD / sqrt(n)
+  const se = popSD / Math.sqrt(sample_size2);
+
+  // 3. Determine range for the curve (centered on popMean)
+  const minX = popMean - (4 * se);
+  const maxX = popMean + (4 * se);
+  
+  // Create a smooth grid of X values
+  const grid = d3.range(minX, maxX, (maxX - minX) / 200);
+  
+  // Normal Density Function using Population Mean and Standard Error
+  const pdf = (x) => (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - popMean) / se, 2));
+  
+  return grid.map(x => ({x: x, y: pdf(x)}));
+}
+
+// 6. PLOT
+{
+  const bins = d3.bin().thresholds(20)(sample_means2);
+  const n = sample_means2.length;
+
+  return Plot.plot({
+    width: 900,
+    height: 500,
+    caption: `Distribution of sample means (n=${sample_size2})`,
+    
+    // Global font style
+    style: {
+      fontSize: "18px",
+      overflow: "visible" 
+    },
+    marginLeft: 60,
+    marginBottom: 60,
+    marginTop: 30,
+
+    // DEFINE LEGEND COLORS
+    color: {
+      domain: ["Sample Mean", "Population Mean", "Normal Curve"],
+      range: ["#D55E00", "black", "#CC79A7"],
+      legend: true
+    },
+    marks: [
+      // Histogram (Manual Density Calculation)
+      Plot.rectY(bins, {
+        x1: "x0", 
+        x2: "x1", 
+        // Density Formula: Count / (Total Samples * Bin Width)
+        y: d => d.length / (n * (d.x1 - d.x0)), 
+        fill: "#56B4E9", 
+        fillOpacity: 0.5,
+        tip: true,
+        title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
+      }),
+      
+      // The Normal Curve Overlay
+      Plot.line(normalCurve2, {
+        x: "x",
+        y: "y",
+        stroke: () => "Normal Curve",
+        strokeWidth: 3
+      }),
+
+      // The Mean of the Sampling Distribution (Red Line)
+      Plot.ruleX([d3.mean(sample_means2)], { 
+        stroke: () => "Sample Mean", 
+        strokeWidth: 3,
+        title: d => `Sample Mean: ${d.toFixed(2)}` 
+      }),
+      
+      // The True Population Mean (Black dashed line)
+      data2 && data2.length > 0 ? Plot.ruleX([d3.mean(data2, d => d.ratio)], { 
+        stroke: () => "Population Mean", 
+        strokeDasharray: "4,4",
+        strokeWidth: 2,
+        opacity: 0.8,
+        title: d => `True Pop Mean: ${d.toFixed(2)}`
+      }) : null
+    ],
+    
+    // AXIS CONFIGURATION
+    x: { 
+      label: "Ratio of income to poverty (sample mean)", 
+      tickFormat: ".1f",
+      labelOffset: 50
+    },
+    y: { 
+      label: "Density", 
+    }
+  })
+}
+```
+
+
+```{r}
+#| eval: false 
+#| include: false 
+// 4. PLOT
+Plot.plot({
+  width: 900,
+  height: 500,
+  caption: `Distribution of sample means (n=${sample_size2})`,
+    // --- FONT SIZE FIX ---
+  // Applying style at the top level affects all text (axes, ticks, etc.)
+  style: {
+    fontSize: "18px",
+    overflow: "visible" // Ensures labels don't get clipped if they are large
+  },
+  // Increase margins to make room for the larger text
+  marginLeft: 60,
+  marginBottom: 60,
+  marginTop: 50,
+  // DEFINE LEGEND COLORS
+  
+  color: {
+    domain: ["Sample Mean", "Population Mean"],
+    range: ["#D55E00", "black"],
+    legend: true
+  },
+  marks: [
+    // Replaced Plot.density (contours) with Plot.rectY (Histogram)
+    Plot.rectY(sample_means2, Plot.binX({y: "count"}, {
+      x: d => d,
+      fill: "#56B4E9", 
+      fillOpacity: 0.5,
+      tip: true // Adds tooltips on hover
+    })),
+    
+    // The Mean of the Sampling Distribution (Red Line)
+    Plot.ruleX([d3.mean(sample_means2)], { 
+      // stroke: "#D55E00", 
+      stroke: () => "Sample Mean", 
+      strokeWidth: 2,
+      title: d => `Mean: ${d.toFixed(2)}` 
+    }),
+    
+    // Optional: The True Population Mean (Black dashed line)
+    Plot.ruleX([d3.mean(data2, d => d.ratio)], { 
+      // stroke: "black", 
+      stroke: () => "Population Mean", 
+      strokeDasharray: "3,3",
+      opacity: 0.5,
+      title: d => `True Pop Mean: ${d.toFixed(2)}`
+    })
+  ],
+  x: { 
+    label: "Ratio of income to poverty", 
+    tickFormat: ".1f",
+  },
+  y: { 
+    label: "Frequency",
+    //labelOffset: 25, // Push label left so it doesn't overlap ticks
+  }
+})
+
+
+```
+
+
+## Central Limit Theorem Definition 
+
+The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, provided the sample size is sufficiently large $(n \geq 30)$ 
+
+---
+
+
+## Central Limit Theorem
+
+The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, as long as the sample size is big enough $(n \geq 30)$  !!!
+
+$$\mathrm{sample} \hspace{.05in} \mathrm{means} \sim \mathcal{N}\big(\mathrm{mean = pop mean}, \mathrm{sd = pop sd}/\sqrt{\mathrm{sample \hspace{.05in} size}}\big) $$ 
+---
+
+
+
+## So what? 
+
+</br>
+
++ Usually, all we have is the sample mean ($\overline{X}$)
++ We would like to use that to learn about the population mean (μ)
++ Now we know the distribution for $\overline{X}$, so we can do that 
++ **Without** knowing the shape of the population data 
+
+---
+
+### Example 
+
+Protein, again
+
+Let's treat the individuals as the population, but pretend we only observe a sample of size $n=50$ 
+
+```{r clt example}
+#| echo: true 
+#| cache: true 
+
+set.seed(4367)
+sample_50 = sample(protein_values, size = 50, replace = FALSE)
+
+sample_mean = mean(sample_50); sample_mean
+```
+
+We got a sample mean of `r round(sample_mean, 1)`. If the true mean in the population were 60 grams, how surprising would it be to get a sample mean this far from 60?
+
+(This is *hypothesis testing*)
+
+---
+
+### Example 
+
+
+
+If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed: 
+
+$$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$ 
+
+
+
+
+---
+
+### Example 
+
+If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed: 
+
+$$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$ 
+
+What about $\sigma$? 
+
+For now, let's pretend we know it. 
+
+```{r sd}
+#| echo: true 
+
+sigma = sd(protein_values); sigma
+
+```
+
+---
+
+### Example 
+
+If the true mean in the population is 60, and we repeatedly took samples of 50 people, then the CLT tells us that the sample means would be Normally distributed: 
+
+$$\bar{X} \sim \mathcal{N}(60, \sigma / \sqrt{50})$$ 
+
+What about $\sigma$? 
+
+For now, let's pretend we know it. 
+
+```{r sd2}
+#| echo: true 
+
+sigma = sd(protein_values); sigma
+
+```
+
+$$\overline{X} \sim \mathcal{N}(60, 33.8 / \sqrt{50} = 4.78)$$ 
+
+
+---
+
+
+### Example
+
+Let's plot that hypothetical distribution as the pink curve: 
+
+```{r ex1}
+#| cache: true 
+sim_values = rnorm(100000, mean = 60, sd = sigma / sqrt(50)) %>% 
+  as_tibble()
+pop_mean = 60
+dens2 = density(sim_values$value)
+y_val = dens2$y[which.min(abs(dens2$x - (sample_mean)))]
+se = sigma / sqrt(50)
+y_val1 = dens2$y[which.min(abs(dens2$x-(pop_mean + se)))]
+y_val2 = dens2$y[which.min(abs(dens2$x-(pop_mean - se)))]
+y_val3 = dens2$y[which.min(abs(dens2$x-sample_mean))]
+opp = pop_mean - (sample_mean - pop_mean)
+y_val4 = dens2$y[which.min(abs(dens2$x-opp))]
+
+pr =
+  sim_values %>% 
+  ggplot(aes(x = value)) + 
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
+  labs(x = "Protein (g)", y = NULL, title = "Distribution of sample means") +
+  scale_x_continuous(breaks = seq(50, 100, 5)) +
+  scale_y_continuous(breaks = c(0)) +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  geom_vline(aes(xintercept = pop_mean), linetype = "dashed", color = "darkgrey") +
+  annotate(geom = "label", x = pop_mean, y = 0.05, 
+           label = glue::glue("Mean = ", round(pop_mean, 1))) + 
+  annotate(geom = "segment", 
+           x = pop_mean + se, xend = pop_mean + se, y = 0, 
+               yend = y_val1, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean + se, y = 0.025, 
+           label = glue::glue("+1 SD (", round(se, 1), ")")) +
+  annotate(geom = "segment", x = pop_mean - se, 
+           xend = pop_mean - se, y = 0, 
+               yend = y_val2, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean - se, y = 0.025, 
+           label = glue::glue("-1 SD (", round(se, 1), ")")) 
+
+
+
+pr
+
+```
+
+---
+
+### Example 
+
+And then add the value we observe (our sample mean) as a blue dot: 
+
+```{r add mean}
+#| cache: true 
+pr + 
+   annotate(geom = "point", 
+           x = sample_mean, y = y_val3, color = "#0072B2", 
+           size = 4)
+```
+
+
+---
+
+### Example 
 
 ::: {.incremental}
++ 
+If the population mean were really 60, is it plausible that we would see a sample mean this far from 60 just by chance?
 
-+ What will happen if we take a sample? 
-+ What if we take another (different) sample?
++ We don’t care only about values that are higher than 60 or only lower than 60: either direction would make us doubt the hypothesis that the true mean is 60.
+
++ So we ask a two-sided question:
+  *How likely is it to be at least this far from 60 in either direction?*
 
 :::
 
-## Distributions describe pattern of data 
+---
 
-```{r protein distribution}
-df = nh_data %>% 
-  filter(year == 2023) 
-df %>% 
-  ggplot(aes(x = protein_gm)) + 
-  geom_histogram(binwidth = 10, color = "black", fill = "#56B4E9") + 
-  labs(x = "Protein Intake (g)", y = "Count", 
-       title = "Protein Intake, 2023") +
-  scale_x_continuous(breaks=seq(0,500,25)) 
+### Example
+
+```{r 2 sided}
+#| cache: true 
+
+dens_df2 = 
+  tibble(x = dens2$x,
+         y = dens2$y)
+pr + 
+  geom_area(data = dens_df2 %>% filter(x <= opp),
+            aes(x, y = y), alpha = 0.3,
+            fill = "#0072B2") +
+  geom_area(data = dens_df2 %>% filter(x > sample_mean),
+            aes(x, y = y), alpha = 0.3, 
+            fill = "#0072B2")  +
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
+  annotate(geom = "point", 
+           x = sample_mean, y = y_val3, color = "#0072B2", 
+           size = 4) +
+  annotate(geom = "point", x = opp,
+            y = y_val4, color = "#0072B2", 
+           size = 4) 
+  
+```
+
+---
+
+### Example 
+
+<span style="color:#0072B2;">Blue shaded area represents:</span>
+
+If the population mean is 60, how likely is it we would observe the sample mean we got? 
+
+```{r pnorm ex1}
+#| echo: true
+#| cache: true
+
+2 * pnorm(60 - (sample_mean - 60), mean = 60, sd = sigma / sqrt(50)) * 100
 
 ```
 
 ---
 
-### Normal distribution 
+### Example 
 
-```{r}
-# special properties? 
+<span style="color:#0072B2;">Blue shaded area represents:</span>
+
+If the population mean is 60, how likely is it we would observe the sample mean we got? 
+
+```{r pnorm ex}
+#| echo: true
+#| cache: true
+
+2 * pnorm(60 - (sample_mean - 60), mean = 60, sd = sigma / sqrt(50)) * 100
+
 ```
 
+We conclude it's plausible that our population mean is 60
+
+---
+
+### Example
+
+Is it plausible that our population mean is 50? 
+
+---
+
+### Example
+
+Let's plot that hypothetical distribution as the pink curve: 
+
+
+```{r ex2}
+#| cache: true 
+sim_values = rnorm(100000, mean = 50, sd = sigma / sqrt(50)) %>% 
+  as_tibble()
+pop_mean = 50
+dens2 = density(sim_values$value)
+y_val = dens2$y[which.min(abs(dens2$x - (sample_mean)))]
+se = sigma / sqrt(50)
+y_val1 = dens2$y[which.min(abs(dens2$x-(pop_mean + se)))]
+y_val2 = dens2$y[which.min(abs(dens2$x-(pop_mean - se)))]
+y_val3 = dens2$y[which.min(abs(dens2$x-sample_mean))]
+opp = pop_mean - (sample_mean - pop_mean)
+y_val4 = dens2$y[which.min(abs(dens2$x-opp))]
+
+pr =
+  sim_values %>% 
+  ggplot(aes(x = value)) + 
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
+  labs(x = "Protein (g)", y = NULL, title = "Distribution of sample means") +
+  scale_x_continuous(breaks = seq(20, 100, 5)) +
+  scale_y_continuous(breaks = c(0)) +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  geom_vline(aes(xintercept = pop_mean), linetype = "dashed", color = "darkgrey") +
+  annotate(geom = "label", x = pop_mean, y = 0.05, 
+           label = glue::glue("Mean = ", round(pop_mean, 1))) + 
+  annotate(geom = "segment", 
+           x = pop_mean + se, xend = pop_mean + se, y = 0, 
+               yend = y_val1, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean + se, y = 0.025, 
+           label = glue::glue("+1 SD (", round(se, 1), ")")) +
+  annotate(geom = "segment", x = pop_mean - se, 
+           xend = pop_mean - se, y = 0, 
+               yend = y_val2, linetype = "dashed", color = "darkgrey") + 
+  annotate(geom = "label", x = pop_mean - se, y = 0.025, 
+           label = glue::glue("-1 SD (", round(se, 1), ")")) 
+
+
+
+pr
+
+```
+
+---
+
+### Example 
+
+And then add the value we observe (our sample mean) as a blue dot: 
+
+```{r add mean2}
+#| cache: true 
+pr + 
+   annotate(geom = "point", 
+           x = sample_mean, y = y_val3, color = "#0072B2", 
+           size = 4)
+```
+
+
+---
+
+
+### Example
+
+Recall we care about the probabilities on both sides 
+
+```{r 2 sided2}
+#| cache: true 
+
+dens_df2 = 
+  tibble(x = dens2$x,
+         y = dens2$y)
+pr + 
+  geom_area(data = dens_df2 %>% filter(x <= opp),
+            aes(x, y = y), alpha = 0.3,
+            fill = "#0072B2") +
+  geom_area(data = dens_df2 %>% filter(x > sample_mean),
+            aes(x, y = y), alpha = 0.3, 
+            fill = "#0072B2")  +
+  geom_density(linewidth = 1.3, color = "#CC79A7") +
+  annotate(geom = "point", 
+           x = sample_mean, y = y_val3, color = "#0072B2", 
+           size = 4) +
+  annotate(geom = "point", x = opp,
+            y = y_val4, color = "#0072B2", 
+           size = 4) 
+  
+```
+
+---
+
+### Example 
+
+<span style="color:#0072B2;">Blue shaded area represents:</span>
+
+If the population mean is 50, how likely is it we would observe the sample mean we got? 
+
+```{r pnorm ex1a}
+#| echo: true
+#| cache: true
+
+2 * pnorm(50 - (sample_mean - 50), mean = 50, sd = sigma / sqrt(50)) * 100
+
+```
+
+---
+
+### Example 
+
+<span style="color:#0072B2;">Blue shaded area represents:</span>
+
+If the population mean is 50, how likely is it we would observe the sample mean we got? 
+
+```{r pnorm ex2a}
+#| echo: true
+#| cache: true
+
+2 * pnorm(50 - (sample_mean - 50), mean = 50, sd = sigma / sqrt(50)) * 100
+
+```
+
+We conclude it's **not** plausible that our population mean is 50
+---

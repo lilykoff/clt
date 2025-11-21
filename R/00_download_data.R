@@ -20,7 +20,15 @@ curl::curl_download(demo_1, destfile = here::here("data/raw/nhanes_2021_demo.xpt
 demo_2 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/DEMO_B.xpt"
 curl::curl_download(demo_2, destfile = here::here("data/raw/nhanes_2001_demo.xpt"))
 
+bmx_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2001/DataFiles/BMX_B.xpt"
+curl::curl_download(bmx_1, destfile = here::here("data/raw/nhanes_2001_bmx.xpt"))
 
+bmx_2 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BMX_L.xpt"
+curl::curl_download(bmx_2, destfile = here::here("data/raw/nhanes_2021_bmx.xpt"))
+
+
+bp_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BPXO_L.xpt"
+curl::curl_download(bp_1, destfile = here::here("data/raw/nhanes_2021_bpx.xpt"))
 ##### old 
 
 nh_diet17 = read_xpt(here::here("data/raw/nhanes_2017_dietary.xpt"))
