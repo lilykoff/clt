@@ -29,6 +29,12 @@ curl::curl_download(bmx_2, destfile = here::here("data/raw/nhanes_2021_bmx.xpt")
 
 bp_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BPXO_L.xpt"
 curl::curl_download(bp_1, destfile = here::here("data/raw/nhanes_2021_bpx.xpt"))
+
+ch_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TCHOL_L.xpt"
+curl::curl_download(ch_1, destfile = here::here("data/raw/nhanes_2021_tchol.xpt"))
+
+# cholesterol 
+
 ##### old 
 
 nh_diet17 = read_xpt(here::here("data/raw/nhanes_2017_dietary.xpt"))
