@@ -76,6 +76,7 @@ scale_fill_okabe  <- function(...) scale_fill_manual(values = okabe_ito, ...)
 
 ```
 
+
 ```{r load data}
 #| cache: true
 #| include: false 
@@ -128,18 +129,120 @@ work_df = read_rds(here::here("data", "processed", "occ_2021.rds")) %>%
   
 ```
 
+## Central Limit Theorem (CLT)
+```{r clt}
+#| cache: true
+
+# 1. GENERATE SHAPES DATA
+set.seed(42)
+
+# --- Top: Skewed Population ---
+# Generate skewed data and density
+pop_dist = rbeta(10000, 2, 5) 
+d_pop = density(pop_dist)
+# Scale density to fit in the top part of the plot (Y: 7.5 to 9.5)
+df_pop = tibble(x = d_pop$x, y = d_pop$y)
+df_pop$x_scaled = scales::rescale(df_pop$x, to = c(2, 8)) # Center horizontally
+df_pop$y_scaled = scales::rescale(df_pop$y, to = c(7.5, 9.5)) # Top vertical position
+
+# --- Bottom: Normal Sampling Distribution ---
+# Generate normal data and density
+norm_dist = rnorm(10000)
+d_norm = density(norm_dist)
+# Scale density to fit in bottom part (Y: 0.5 to 2.5)
+df_norm = data.frame(x = d_norm$x, y = d_norm$y)
+df_norm$x_scaled = scales::rescale(df_norm$x, to = c(3, 7)) # Center, narrower
+df_norm$y_scaled = scales::rescale(df_norm$y, to = c(0.5, 2.5)) # Bottom vertical position
+
+# --- Middle: Sample Buckets ---
+# Coordinates for 3 sample boxes
+samples_df = tibble(
+  id = c("Sample 1", "Sample 2", "Sample 3"),
+  x_center = c(2.5, 5, 7.5),
+  y_center = rep(5, 3),
+  width = 1.2,
+  height = 1.2
+)
+
+# Random dots for inside the buckets
+dots_df = samples_df %>% 
+  rowwise() %>% 
+  mutate(
+    dots_x = list(runif(10, x_center - width/2.5, x_center + width/2.5)),
+    dots_y = list(runif(10, y_center - height/2.5, y_center + height/2.5))
+  ) %>% 
+  unnest(cols = c(dots_x, dots_y))
+
+# 2. PLOT
+clt_plot = ggplot() +
+  # --- TOP LAYER: POPULATION ---
+  geom_polygon(data = df_pop, aes(x = x_scaled, y = y_scaled), 
+               fill = "black", alpha = 0.8) +
+  geom_text(aes(x = 2, y = 9), label = "Population\nDistribution", 
+            hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "black") +
+  geom_text(aes(x = 8.2, y = 8.5), label = "(Unknown,\npotenially skewed)", 
+            hjust = 0, vjust = 0.5, size = 5, color = "grey40", fontface = "italic") +
+
+  # --- MIDDLE LAYER: SAMPLES ---
+  # Draw rectangles for buckets
+  geom_tile(data = samples_df, aes(x = x_center, y = y_center, width = width, height = height),
+            fill = "#f6f5f3", color = "#E69F00", linewidth = 1.5) +
+  # Add dots inside
+  geom_point(data = dots_df, aes(x = dots_x, y = dots_y), 
+             color = "#E69F00", size = 2, alpha = 0.7) +
+  geom_text(data = samples_df, aes(x = x_center, y = y_center - 0.9, label = id),
+            size = 5, fontface = "bold", color = "#E69F00") +
+  
+  # --- BOTTOM LAYER: SAMPLING DIST ---
+  geom_polygon(data = df_norm, aes(x = x_scaled, y = y_scaled), 
+               fill = "#CC79A7", alpha = 0.6) +
+   geom_text(aes(x = 2, y = 1.5), label = "Sampling\nDistribution", 
+            hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "#CC79A7") +
+  geom_text(aes(x = 7.2, y = 1.5), label = "(Normal,\npredictable!)", 
+            hjust = 0, vjust = 0.5, size = 5, color = "#CC79A7", fontface = "italic") +
+
+  # --- ARROWS ---
+  # Arrows Down from Pop to Samples
+  geom_curve(aes(x = 5, y = 7.5, xend = 2.5, yend = 5.7), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
+  geom_curve(aes(x = 5, y = 7.5, xend = 5, yend = 5.7), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60") +
+  geom_curve(aes(x = 5, y = 7.5, xend = 7.5, yend = 5.7), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60") +
+  
+  # Arrows Converging to Sampling Dist
+  geom_curve(aes(x = 2.5, y = 4.3, xend = 5, yend = 2.6), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60") +
+  geom_curve(aes(x = 5, y = 4.3, xend = 5, yend = 2.6), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60") +
+  geom_curve(aes(x = 7.5, y = 4.3, xend = 5, yend = 2.6), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
+
+  # --- THEME ---
+  xlim(0, 10) + ylim(0, 10) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f6f5f3", color = NA))
+clt_plot
+```
+
+---
 
 ## Motivating questions 
 
 <div style="font-size: 150%;">
 
-How much protein do Americans consume, on average? 
+::: {.incremental}
 
-Do Americans consume more protein now than they did 20 years ago? 
++ How much protein do Americans consume, on average? 
 
-We will use the Central Limit Theorem (CLT) to help us answer these questions
++ Do Americans consume more protein now than they did 20 years ago? 
+
++ We will use the CLT  to help us answer these questions
+
 
 </div>
+
+:::
 
 ---
 
@@ -643,96 +746,7 @@ ss +
 ```{r clt schematic}
 #| cache: true
 
-
-# 1. GENERATE SHAPES DATA
-set.seed(42)
-
-# --- Top: Skewed Population ---
-# Generate skewed data and density
-pop_dist = rbeta(10000, 2, 5) 
-d_pop = density(pop_dist)
-# Scale density to fit in the top part of the plot (Y: 7.5 to 9.5)
-df_pop = tibble(x = d_pop$x, y = d_pop$y)
-df_pop$x_scaled = scales::rescale(df_pop$x, to = c(2, 8)) # Center horizontally
-df_pop$y_scaled = scales::rescale(df_pop$y, to = c(7.5, 9.5)) # Top vertical position
-
-# --- Bottom: Normal Sampling Distribution ---
-# Generate normal data and density
-norm_dist = rnorm(10000)
-d_norm = density(norm_dist)
-# Scale density to fit in bottom part (Y: 0.5 to 2.5)
-df_norm = data.frame(x = d_norm$x, y = d_norm$y)
-df_norm$x_scaled = scales::rescale(df_norm$x, to = c(3, 7)) # Center, narrower
-df_norm$y_scaled = scales::rescale(df_norm$y, to = c(0.5, 2.5)) # Bottom vertical position
-
-# --- Middle: Sample Buckets ---
-# Coordinates for 3 sample boxes
-samples_df = tibble(
-  id = c("Sample 1", "Sample 2", "Sample 3"),
-  x_center = c(2.5, 5, 7.5),
-  y_center = rep(5, 3),
-  width = 1.2,
-  height = 1.2
-)
-
-# Random dots for inside the buckets
-dots_df = samples_df %>% 
-  rowwise() %>% 
-  mutate(
-    dots_x = list(runif(10, x_center - width/2.5, x_center + width/2.5)),
-    dots_y = list(runif(10, y_center - height/2.5, y_center + height/2.5))
-  ) %>% 
-  unnest(cols = c(dots_x, dots_y))
-
-# 2. PLOT
-ggplot() +
-  # --- TOP LAYER: POPULATION ---
-  geom_polygon(data = df_pop, aes(x = x_scaled, y = y_scaled), 
-               fill = "black", alpha = 0.8) +
-  geom_text(aes(x = 2, y = 9), label = "Population\nDistribution", 
-            hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "black") +
-  geom_text(aes(x = 8.2, y = 8.5), label = "(Unknown,\npotenially skewed)", 
-            hjust = 0, vjust = 0.5, size = 5, color = "grey40", fontface = "italic") +
-
-  # --- MIDDLE LAYER: SAMPLES ---
-  # Draw rectangles for buckets
-  geom_tile(data = samples_df, aes(x = x_center, y = y_center, width = width, height = height),
-            fill = "#f6f5f3", color = "#E69F00", linewidth = 1.5) +
-  # Add dots inside
-  geom_point(data = dots_df, aes(x = dots_x, y = dots_y), 
-             color = "#E69F00", size = 2, alpha = 0.7) +
-  geom_text(data = samples_df, aes(x = x_center, y = y_center - 0.9, label = id),
-            size = 5, fontface = "bold", color = "#E69F00") +
-  
-  # --- BOTTOM LAYER: SAMPLING DIST ---
-  geom_polygon(data = df_norm, aes(x = x_scaled, y = y_scaled), 
-               fill = "#CC79A7", alpha = 0.6) +
-   geom_text(aes(x = 2, y = 1.5), label = "Sampling\nDistribution", 
-            hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "#CC79A7") +
-  geom_text(aes(x = 7.2, y = 1.5), label = "(Normal,\npredictable!)", 
-            hjust = 0, vjust = 0.5, size = 5, color = "#CC79A7", fontface = "italic") +
-
-  # --- ARROWS ---
-  # Arrows Down from Pop to Samples
-  geom_curve(aes(x = 5, y = 7.5, xend = 2.5, yend = 5.7), 
-             arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
-  geom_curve(aes(x = 5, y = 7.5, xend = 5, yend = 5.7), 
-             arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60") +
-  geom_curve(aes(x = 5, y = 7.5, xend = 7.5, yend = 5.7), 
-             arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60") +
-  
-  # Arrows Converging to Sampling Dist
-  geom_curve(aes(x = 2.5, y = 4.3, xend = 5, yend = 2.6), 
-             arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60") +
-  geom_curve(aes(x = 5, y = 4.3, xend = 5, yend = 2.6), 
-             arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60") +
-  geom_curve(aes(x = 7.5, y = 4.3, xend = 5, yend = 2.6), 
-             arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
-
-  # --- THEME ---
-  xlim(0, 10) + ylim(0, 10) +
-  theme_void() +
-  theme(plot.background = element_rect(fill = "#f6f5f3", color = NA))
+clt_plot
 ```
 
 
