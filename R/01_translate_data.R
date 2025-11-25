@@ -85,3 +85,27 @@ tch_trans = nhanesTranslate(nh_table = "TCHOL_L", data = tch_2021)
 
 write_rds(tch_trans, here::here("data", "processed", "tch_2021.rds"))
 
+inc_2021 = read_xpt(here::here("data/raw/nhanes_2021_inc.xpt"))
+inc_trans = nhanesTranslate(nh_table = "INQ_L", data = inc_2021)
+
+
+write_rds(inc_trans, here::here("data", "processed", "inc_2021.rds"))
+
+occ_2021 = read_xpt(here::here("data/raw/nhanes_2021_occ.xpt"))
+occ_trans = nhanesTranslate(nh_table = "OCQ_L", data = occ_2021)
+
+lab_df = 
+  sjlabelled::label_to_colnames(occ_trans) %>% 
+  janitor::clean_names()
+
+lab_df = 
+  lab_df %>% 
+  mutate(number_of_hours_worked_in_the_last_week = 
+           if_else(number_of_hours_worked_in_the_last_week %in% c(77777, 99999), 
+                   NA_real_, 
+                   number_of_hours_worked_in_the_last_week))
+
+write_rds(lab_df, here::here("data", "processed", "occ_2021.rds"))
+
+
+

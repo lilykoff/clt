@@ -114,21 +114,31 @@ inc_df =
   filter(!is.na(ratio_of_family_income_to_poverty)) %>% 
   rename(ratio = ratio_of_family_income_to_poverty)
 
+
+
 # write_csv(inc_df, here::here("docs", "income_df.csv"))
 
-protein_values = protein_df23$protein_gm
+work_df = read_rds(here::here("data", "processed", "occ_2021.rds")) %>% 
+  filter(!is.na(number_of_hours_worked_in_the_last_week)) %>% 
+  rename(hrs_worked = number_of_hours_worked_in_the_last_week)
+
+# write_csv(work_df, here::here("docs", "work_df.csv"))
 
   
 ```
 
 
-## Motivating question 
+## Motivating questions 
 
-How much protein do Americans consume? 
+<div style="font-size: 150%;">
+
+How much protein do Americans consume, on average? 
 
 Do Americans consume more protein now than they did 20 years ago? 
 
-We will use the Central Limit Theorem (CLT) to help us answer this question.
+We will use the Central Limit Theorem (CLT) to help us answer these questions
+
+</div>
 
 ---
 
@@ -137,12 +147,15 @@ We will use the Central Limit Theorem (CLT) to help us answer this question.
 
 ::: {.incremental}
 
+<div style="font-size: 150%;">
+
 + Mean: average, center of data
 
 + Standard deviation (SD): measure of spread of data; average squared distance from mean
 
 + (Probability) distribution: mathematically describes possible values for a variable and how often they occur
 
+</div>
 :::
 
 ---
@@ -160,7 +173,7 @@ p_normal =
             xlim = c(-3.2, 3.2), fill = "#56B4E9", alpha = 0.5) +
   stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1) +
   # theme(axis.text.y = element_blank())+
-  labs(y = "Frequency", x = "Data (x)") +
+  labs(y = "Density", x = "Data (x)") +
   scale_x_continuous(breaks = seq(-3, 3, 1))
 
 p_normal 
@@ -219,11 +232,14 @@ sat_score %>%
 
 ::: {.incremental}
 
+<div style="font-size: 150%;">
+
 + Symmetric 
 + Can be described by two values: mean and standard deviation 
 + 68-95-99.7 rule tells us where most of data lie 
 + We can calculate probabilities of values occurring within the distribution
 
+</div>
 :::
 
 ---
@@ -251,11 +267,11 @@ p_means =
     stat_function(fun = dnorm, n = 101, args = list(mean = 1, sd = 1), linewidth = 1.1, aes(color = "Mean = 1")) +
       stat_function(fun = dnorm, n = 101, args = list(mean = -1, sd = 1), linewidth = 1.1, aes(color = "Mean = -1")) +
   # theme(axis.text.y = element_blank())+
-  labs(y = "Frequency", x = "Data (x)", title = "Normal Distributions with Different Means") +
+  labs(y = "Density", x = "Data (x)", title = "Normal Distributions with Different Means") +
   scale_x_continuous(breaks = seq(-4, 4, 1)) +
   theme(legend.position = c(0.9, 0.9),
         axis.text.x = element_text(size = 14),
-        legend.background = element_rect(fill="#f6f5f3",color = NA),
+        legend.background = element_rect(fill="#f6f5f3", color = "darkgrey"),
         legend.title = element_blank(),
         legend.text = element_text(size = 14)) +
   scale_color_manual(values = c("#009E73", "#000000", "#D55E00"), name = "")
@@ -276,10 +292,10 @@ p_sds =
   stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 0.5), linewidth = 1.1, aes(color = "SD = 0.5")) +
     stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1, aes(color = "SD = 1")) +
       stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 2), linewidth = 1.1, aes(color = "SD = 2")) +
-  labs(y = "Frequency", x = "Data (x)", title = "Normal Distributions with Different Standard Deviations") +
+  labs(y = "Density", x = "Data (x)", title = "Normal Distributions with Different Standard Deviations") +
   scale_x_continuous(breaks = seq(-4, 4, 1)) +
   theme(legend.position = c(0.9, 0.9),
-        legend.background = element_rect(fill="#f6f5f3",color = NA),
+        legend.background = element_rect(fill="#f6f5f3",color = "darkgrey"),
         legend.title = element_blank(),
         legend.text = element_text(size = 14)) +
   scale_color_manual(values = c("#0072B2", "#000000", "#CC79A7"), name = "")
@@ -295,7 +311,7 @@ p_sds
 #| cache: true 
 ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
   # theme(axis.text.y = element_blank()) +
-  labs(y = "Frequency", x = "Data (x)") +
+  labs(y = "Density", x = "Data (x)") +
   stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
                 linewidth = 1.1) +
   scale_x_continuous(breaks = seq(-3, 3, 1)) +
@@ -346,7 +362,7 @@ pn_1 = ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
            linetype = "dashed") +
   annotate(geom = "label", x = -1, y = 0.15, label = "Mean - 1 SD", size = 5) +
   # theme(axis.text.y = element_blank()) +
-  labs(y = "Frequency", x = "Data (x)") +
+  labs(y = "Density", x = "Data (x)") +
   scale_x_continuous(breaks = seq(-3, 3, 1))
 
 
@@ -549,20 +565,19 @@ bmx_joined %>%
 
 ---
 
-### Poverty 
+### Hours worked
 
 ```{r poverty}
 #| cache: true 
 
 
 pplot = 
-  bmx_joined %>% 
-  filter(age_in_years_at_screening >= 18) %>% 
-  ggplot(aes(x = ratio_of_family_income_to_poverty)) + 
-  geom_histogram(binwidth = 0.5,
+  work_df %>% 
+  ggplot(aes(x = hrs_worked)) + 
+  geom_histogram(binwidth = 5,
                  fill = "#56B4E9", color = "black") +
-  scale_x_continuous(breaks=seq(0, 5, 0.5)) +
-  labs(x = "Ratio of family income to poverty level", y = "Number of families", title = "Income among American adults",
+  scale_x_continuous(breaks=seq(0, 80, 5)) +
+  labs(x = "Number of hours worked per week", y = "Number of individuals", title = "Weekly hours worked among American adults",
        subtitle = "From the 2023 National Health and Nutrition Examination Survey") +
   theme(legend.position = "none") 
 
@@ -574,6 +589,9 @@ pplot
 ### Mean SAT scores by state 
 
 ```{r statesat}
+#| cache: true
+
+
 ss = sat_states %>% 
   ggplot(aes(x = SATT)) +
   geom_histogram(color = "black", fill = "#56B4E9", binwidth = 25) +
@@ -590,6 +608,8 @@ ss
 ### Mean SAT scores by state 
 
 ```{r statesat2}
+#| cache: true
+
 ss +
   annotate(geom = "curve",
            x = 925, xend = 900, y = 7.5, yend= 10,
@@ -603,358 +623,25 @@ ss +
 
 ## The problem
 
+::: {.incremental}
+<div style="font-size: 150%;">
+
 + Normally distributed data is easy to work with
 + Most data isn't Normally distributed
 + What if I take a sample of 50 people from a population of non-Normal data, and use that to estimate the population average? 
 + Magic happens! 
 
-
----
-
-## Sampling
-
-::: {.incremental}
-
-+ Imagine we know the ratio of income to poverty level for every household in the U.S. This is the **population**
-
-+ We saw before that this data is not Normal. 
-
-+ Now let's pretend we *don't* have data on every U.S. household, we just have a random selection of 50 households.
-
-+ Can I use the mean of those 50 households to estimate the mean in the population? Let's find out! 
+</div> 
 
 :::
 
----
-
-
-### Sampling
-
-```{r protein pop1}
-#| cache: true 
-
-inc_df = bmx_joined %>% 
-  filter(age_in_years_at_screening >= 18) %>% 
-  filter(!is.na(ratio_of_family_income_to_poverty)) %>% 
-  rename(income = ratio_of_family_income_to_poverty)
-
-xy_df = expand_grid(x = 1:ceiling(sqrt(nrow(inc_df))), y = 1:1:ceiling(sqrt(nrow(inc_df)))) %>% 
-  slice(1:nrow(inc_df))
-
-dots = 
-  inc_df %>% 
-  bind_cols(xy_df) %>% 
-  ggplot(aes(x, y, color = income)) + 
-  geom_point(size = 0.5) + 
-  coord_equal() +
-  theme_void() +
-  scale_color_viridis(option = "B", direction = -1,name = "Ratio of family income to poverty",
-                      limits=c(0,5)) +
-  theme(legend.position = "bottom") + 
-  labs(title = "Population of income ratio values") + 
-  annotate(geom = "label", size = 5,
-           x = 71 / 2, y = 71 / 2,
-           label = glue::glue("Mean = ", round(mean(inc_df$income), 1)),
-           fill = "white")
-
-plot_grid(dots, NULL, align = "v", rel_widths = c(1,1), ncol = 2)
-
-
-```
-
----
-
-### Sampling
-
-```{r protein samp1}
-#| cache: true 
-
-set.seed(123)
-sample = inc_df %>% 
-  bind_cols(xy_df) %>% 
-  slice_sample(n = 50, replace = FALSE)
-
-samp_protein = 
-  inc_df %>% 
-  ggplot(aes(x = x, y = y)) + 
-  geom_point(data = sample, aes(color = income), size = 0.5) + 
-  theme_void() +
-  coord_equal() + 
-  scale_color_viridis(option = "B", direction = -1, name = "Ratio of family income to poverty",
-                      limits=c(0,5)) +
-  theme(legend.position = "bottom") + 
-  labs(title = "Sample of income values (n=50)") + 
-  annotate(geom = "label", size = 5,
-           x = 71 / 2, y = 71 / 2,
-           label = glue::glue("Sample mean = ", round(mean(sample$income), 1)),
-           fill = "white")
-
-
-plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
-
-
-```
-
----
-
-### Sampling
-
-```{r protein samp2}
-#| cache: true 
-
-set.seed(1234)
-sample = inc_df %>% 
-  bind_cols(xy_df) %>% 
-  slice_sample(n = 50, replace = FALSE)
-
-samp_protein = 
-  inc_df %>% 
-  ggplot(aes(x = x, y = y)) + 
-  geom_point(data = sample, aes(color = income), size = 0.5) + 
-  theme_void() +
-  coord_equal() + 
-  scale_color_viridis(option = "B", direction = -1, name = "Ratio of family income to poverty",
-                      limits=c(0,5)) +
-  theme(legend.position = "bottom") + 
-  labs(title = "Sample of income values (n=50)") + 
-  annotate(geom = "label", size = 5,
-           x = 71 / 2, y = 71 / 2,
-           label = glue::glue("Sample mean = ", round(mean(sample$income), 1)),
-           fill = "white")
-
-
-plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
-
-
-```
-
----
-
-### Sampling
-
-```{r protein samp3}
-#| cache: true 
-
-set.seed(2345)
-sample = inc_df %>% 
-  bind_cols(xy_df) %>% 
-  slice_sample(n = 50, replace = FALSE)
-
-samp_protein = 
-  inc_df %>% 
-  ggplot(aes(x = x, y = y)) + 
-  geom_point(data = sample, aes(color = income), size = 0.5) + 
-  theme_void() +
-  coord_equal() + 
-  scale_color_viridis(option = "B", direction = -1, name = "Ratio of family income to poverty",
-                      limits=c(0,5)) +
-  theme(legend.position = "bottom") + 
-  labs(title = "Sample of income values (n=50)") + 
-  annotate(geom = "label", size = 5,
-           x = 71 / 2, y = 71 / 2,
-           label = glue::glue("Sample mean = ", round(mean(sample$income), 1)),
-           fill = "white")
-
-
-plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
-
-
-
-```
-
----
-
-### Sampling 
-
-If we keep taking samples of size 50, the distribution of the **mean** of those samples is Normal 
-
----
-
-
-### Explore different sample sizes: income data 
-
-```{ojs}
-data2 = FileAttachment("income_df.csv").csv({ typed: true })
-
-viewof sample_size2 = Inputs.range(
-  [2, 100], 
-  {value: 50, step: 1, label: "Sample size:"}
-)
-
-//viewof n_samples = Inputs.range(
-//  [10, 1000], 
-  //{value: 500, step: 10, label: "Number samples:"}
-//)
-
-sample_means2 = {
-  // Dependency tracking: re-run when these change
-  sample_size2;
-  
-  // Safety check: ensure data is loaded
-  if (!data2 || data2.length === 0) return [];
-  
-  // Safety check: ensure column exists (Case Sensitive!)
-  if (typeof data2[0].ratio === "undefined") {
-    return ["Error: Column 'ratio' not found in data"];
-  }
-
-  const means = [];
-  // Create a local copy of the array to shuffle
-  // We do this inside the loop or use a specific shuffler to ensure 
-  // we are sampling from the full population every time.
-  const popArray = Array.from(data2); 
-
-  for (let i = 0; i < 500; i++) {
-    // 1. Shuffle a clean copy of the population
-    // 2. Slice the first n elements (Sampling WITHOUT replacement)
-    const sample = d3.shuffle([...popArray]).slice(0, sample_size2);
-
-    // 3. Compute mean
-    const m = d3.mean(sample, d => d.ratio);
-    means.push(m);
-  }
-
-  return means;
-}
-
-
-// 5. CALCULATE NORMAL CURVE (THEORETICAL)
-// We now generate the curve based on the Population Parameters, not the sample.
-// This shows the Theoretical prediction of the CLT.
-normalCurve2 = {
-  if (sample_means2.length < 2 || !data2) return [];
-  
-  // 1. Get Population Statistics
-  const popMean = d3.mean(data2, d => d.ratio);
-  const popSD = d3.deviation(data2, d => d.ratio);
-  
-  // 2. Calculate Standard Error (The predicted width of the sampling distribution)
-  // Formula: Population SD / sqrt(n)
-  const se = popSD / Math.sqrt(sample_size2);
-
-  // 3. Determine range for the curve (centered on popMean)
-  const minX = popMean - (4 * se);
-  const maxX = popMean + (4 * se);
-  
-  // Create a smooth grid of X values
-  const grid = d3.range(minX, maxX, (maxX - minX) / 200);
-  
-  // Normal Density Function using Population Mean and Standard Error
-  const pdf = (x) => (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - popMean) / se, 2));
-  
-  return grid.map(x => ({x: x, y: pdf(x)}));
-}
-
-// 6. PLOT
-// 6. SIDE-BY-SIDE PLOTS WITH EXTERNAL LEGEND
-{
-  // --- A. SETUP VARIABLES ---
-  const popMean = d3.mean(data2, d => d.ratio);
-  const n = sample_means2.length;
-  const bins = d3.bin().thresholds(20)(sample_means2);
-  
-  // Define colors here so we can use them in the Plot AND the separate Legend
-  const colorDomain = ["Sample Mean", "Population Mean", "Normal Curve"];
-  const colorRange = ["#D55E00", "black", "#CC79A7"];
-
-  // --- B. POPULATION PLOT (Left) ---
-  const popPlot = Plot.plot({
-    width: 450,
-    height: 400,
-    caption: "Population Distribution (Raw Data)",
-    // Force margins to match the right plot exactly
-    marginTop: 40,
-    marginLeft: 50,
-    marginBottom: 40,
-    style: { fontSize: "14px", overflow: "visible" },
-    
-    marks: [
-      Plot.rectY(data2, Plot.binX({y: "count"}, {x: "ratio", fill: "#E69F00", fillOpacity: 0.5})),
-      //Plot.ruleX([popMean], {stroke: "black", strokeWidth: 2, strokeDasharray: "4,4"}),
-      //Plot.text([popMean], {x: d => d, y: 0, dy: -10, text: () => "Pop. Mean", fill: "black", textAnchor: "start", dx: 5})
-    ],
-    x: { label: "Ratio (Income to Poverty)" },
-    y: { label: "Count" }
-  });
-
-  // --- C. SAMPLING DISTRIBUTION PLOT (Right) ---
-  const sampPlot = Plot.plot({
-    width: 450,
-    height: 400,
-    caption: `Sampling Distribution (n=${sample_size2})`,
-    // Force margins to match the left plot exactly
-    marginTop: 40,
-    marginLeft: 50,
-    marginBottom: 40,
-    style: { fontSize: "14px", overflow: "visible" },
-    
-    // We define the color domain for mapping, but turn off the internal legend
-    color: {
-      domain: colorDomain,
-      range: colorRange,
-      legend: false // <--- TURNED OFF INTERNAL LEGEND
-    },
-    marks: [
-      Plot.rectY(bins, {
-        x1: "x0", x2: "x1", 
-        y: d => d.length / (n * (d.x1 - d.x0)), 
-        fill: "#56B4E9", fillOpacity: 0.5, tip: true,
-        title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
-      }),
-      Plot.line(normalCurve2, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
-      Plot.ruleX([d3.mean(sample_means2)], {stroke: () => "Sample Mean", strokeWidth: 3}),
-      Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
-    ],
-    x: { label: "Sample Mean", tickFormat: ".1f" },
-    y: { label: "Density" }
-  });
-
-  // --- D. CREATE STANDALONE LEGEND ---
-  // We create a swatches legend using the same domain/range
-  const myLegend = Plot.legend({
-    color: {
-      domain: colorDomain,
-      range: colorRange
-    },
-    style: { marginBottom: "10px", fontSize: "14px" } // Add space below legend
-  });
-
-  // --- E. RETURN LAYOUT ---
-  // We stack the Legend on top, then the Flexbox row of plots below it
-  return html`
-  <div style="display: flex; flex-direction: column; align-items: center;">
-    
-    <div style="width: 100%; max-width: 920px; display: flex; justify-content: flex-end;">
-      ${myLegend}
-    </div>
-    
-    <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
-      <div>${popPlot}</div>
-      <div>${sampPlot}</div>
-    </div>
-  </div>`;
-}
-```
-
----
-
-## Simulations 
-
-[https://www.statscalculators.com/resources/simulations/central-limit-theorem](https://www.statscalculators.com/resources/simulations/central-limit-theorem)
-
-[https://seeing-theory.brown.edu/probability-distributions/index.html](https://seeing-theory.brown.edu/probability-distributions/index.html)
-
-## Central Limit Theorem
-
-The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, as long as the sample size is big enough !!!
-
-For many distributions, $n=30$ is sufficient, but for some distributions, a larger sample size may be required
 
 ---
 
 ## Central Limit Theorem 
 
 ```{r}
+#| cache: true
 
 
 # 1. GENERATE SHAPES DATA
@@ -962,25 +649,25 @@ set.seed(42)
 
 # --- Top: Skewed Population ---
 # Generate skewed data and density
-pop_dist <- rbeta(10000, 2, 5) 
-d_pop <- density(pop_dist)
+pop_dist = rbeta(10000, 2, 5) 
+d_pop = density(pop_dist)
 # Scale density to fit in the top part of the plot (Y: 7.5 to 9.5)
-df_pop <- data.frame(x = d_pop$x, y = d_pop$y)
-df_pop$x_scaled <- scales::rescale(df_pop$x, to = c(2, 8)) # Center horizontally
-df_pop$y_scaled <- scales::rescale(df_pop$y, to = c(7.5, 9.5)) # Top vertical position
+df_pop = tibble(x = d_pop$x, y = d_pop$y)
+df_pop$x_scaled = scales::rescale(df_pop$x, to = c(2, 8)) # Center horizontally
+df_pop$y_scaled = scales::rescale(df_pop$y, to = c(7.5, 9.5)) # Top vertical position
 
 # --- Bottom: Normal Sampling Distribution ---
 # Generate normal data and density
-norm_dist <- rnorm(10000)
-d_norm <- density(norm_dist)
+norm_dist = rnorm(10000)
+d_norm = density(norm_dist)
 # Scale density to fit in bottom part (Y: 0.5 to 2.5)
-df_norm <- data.frame(x = d_norm$x, y = d_norm$y)
-df_norm$x_scaled <- scales::rescale(df_norm$x, to = c(3, 7)) # Center, narrower
-df_norm$y_scaled <- scales::rescale(df_norm$y, to = c(0.5, 2.5)) # Bottom vertical position
+df_norm = data.frame(x = d_norm$x, y = d_norm$y)
+df_norm$x_scaled = scales::rescale(df_norm$x, to = c(3, 7)) # Center, narrower
+df_norm$y_scaled = scales::rescale(df_norm$y, to = c(0.5, 2.5)) # Bottom vertical position
 
 # --- Middle: Sample Buckets ---
 # Coordinates for 3 sample boxes
-samples_df <- tibble(
+samples_df = tibble(
   id = c("Sample 1", "Sample 2", "Sample 3"),
   x_center = c(2.5, 5, 7.5),
   y_center = rep(5, 3),
@@ -989,7 +676,7 @@ samples_df <- tibble(
 )
 
 # Random dots for inside the buckets
-dots_df <- samples_df %>% 
+dots_df = samples_df %>% 
   rowwise() %>% 
   mutate(
     dots_x = list(runif(10, x_center - width/2.5, x_center + width/2.5)),
@@ -1051,15 +738,376 @@ ggplot() +
 
 ---
 
+## Sampling experiment
+
+::: {.incremental}
+<div style="font-size: 150%;">
+
++ Imagine we know the hours worked for every adult in the U.S. This is the **population**
+
++ We saw before that this data is not Normal
+
++ Now let's pretend we *don't* have data on every person, we just have a random selection of 50 people from that population. This is a **sample**
+
++ What does the distribution of the samples look like? 
+
+</div>
+:::
+
+---
+
+
+### Sampling
+
+```{r protein pop1}
+#| cache: true 
+
+
+xy_df = expand_grid(x = 1:ceiling(sqrt(nrow(work_df))), y = 1:1:ceiling(sqrt(nrow(work_df)))) %>% 
+  slice(1:nrow(work_df))
+
+dots = 
+  work_df %>% 
+  bind_cols(xy_df) %>% 
+  ggplot(aes(x, y, color = hrs_worked)) + 
+  geom_point(size = 0.5) + 
+  coord_equal() +
+  theme_void() +
+  scale_color_viridis(option = "B", direction = -1,name = "Hours worked",
+                      limits=c(0,80)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Population of hours worked values") + 
+  annotate(geom = "label", size = 5,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Mean = ", round(mean(work_df$hrs_worked), 1)),
+           fill = "white")
+
+plot_grid(dots, NULL, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+```
+
+---
+
+### Sampling
+
+```{r protein samp1}
+#| cache: true 
+
+set.seed(123)
+sample = work_df %>% 
+  bind_cols(xy_df) %>% 
+  slice_sample(n = 50, replace = FALSE)
+
+samp_protein = 
+  work_df %>% 
+  bind_cols(xy_df) %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(alpha = 0) +
+  geom_point(data = sample, aes(color = hrs_worked), size = 0.5) + 
+  theme_void() +
+  coord_equal() + 
+  scale_color_viridis(option = "B", direction = -1, name = "Hours worked",
+                      limits = c(0, 80)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Sample of hours values (n=50)") + 
+  annotate(geom = "label", size = 5,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Sample mean = ", round(mean(sample$hrs_worked), 1)),
+           fill = "white")
+
+
+plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+```
+
+---
+
+### Sampling
+
+```{r protein samp2}
+#| cache: true 
+
+set.seed(1234)
+sample = work_df %>% 
+  bind_cols(xy_df) %>% 
+  slice_sample(n = 50, replace = FALSE)
+
+samp_protein = 
+  work_df %>% 
+  bind_cols(xy_df) %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(alpha = 0) +
+  geom_point(data = sample, aes(color = hrs_worked), size = 0.5) + 
+  theme_void() +
+  coord_equal() + 
+  scale_color_viridis(option = "B", direction = -1, name = "Hours worked",
+                      limits = c(0, 80)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Sample of hours worked values (n=50)") + 
+  annotate(geom = "label", size = 5,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Sample mean = ", round(mean(sample$hrs_worked), 1)),
+           fill = "white")
+
+
+plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+```
+
+---
+
+### Sampling
+
+```{r protein samp3}
+#| cache: true 
+
+set.seed(2331)
+sample = work_df %>% 
+  bind_cols(xy_df) %>% 
+  slice_sample(n = 50, replace = FALSE)
+
+samp_protein = 
+  work_df %>% 
+  bind_cols(xy_df) %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(alpha = 0) +
+  geom_point(data = sample, aes(color = hrs_worked), size = 0.5) + 
+  theme_void() +
+  coord_equal() + 
+  scale_color_viridis(option = "B", direction = -1, name = "Hours worked",
+                      limits = c(0, 80)) +
+  theme(legend.position = "bottom") + 
+  labs(title = "Sample of hours worked values (n=50)") + 
+  annotate(geom = "label", size = 5,
+           x = 71 / 2, y = 71 / 2,
+           label = glue::glue("Sample mean = ", round(mean(sample$hrs_worked), 1)),
+           fill = "white")
+
+
+plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
+
+
+
+```
+
+# What does the distribution of these sample means look like? 
+
+---
+
+
+### Sampling distribution: income data 
+
+```{ojs}
+data2 = FileAttachment("work_df.csv").csv({ typed: true })
+
+viewof sample_size2 = Inputs.range(
+  [2, 100], 
+  {value: 30, step: 1, label: "Sample size:"}
+)
+
+//viewof n_samples = Inputs.range(
+//  [10, 1000], 
+  //{value: 500, step: 10, label: "Number samples:"}
+//)
+
+sample_means2 = {
+  // Dependency tracking: re-run when these change
+  sample_size2;
+  
+  // Safety check: ensure data is loaded
+  if (!data2 || data2.length === 0) return [];
+  
+  // Safety check: ensure column exists (Case Sensitive!)
+  if (typeof data2[0].hrs_worked === "undefined") {
+    return ["Error: Column 'hrs_worked' not found in data"];
+  }
+
+  const means = [];
+  // Create a local copy of the array to shuffle
+  // We do this inside the loop or use a specific shuffler to ensure 
+  // we are sampling from the full population every time.
+  const popArray = Array.from(data2); 
+
+  for (let i = 0; i < 500; i++) {
+    // 1. Shuffle a clean copy of the population
+    // 2. Slice the first n elements (Sampling WITHOUT replacement)
+    const sample = d3.shuffle([...popArray]).slice(0, sample_size2);
+
+    // 3. Compute mean
+    const m = d3.mean(sample, d => d.hrs_worked);
+    means.push(m);
+  }
+
+  return means;
+}
+
+
+// 5. CALCULATE NORMAL CURVE (THEORETICAL)
+// We now generate the curve based on the Population Parameters, not the sample.
+// This shows the Theoretical prediction of the CLT.
+normalCurve2 = {
+  if (sample_means2.length < 2 || !data2) return [];
+  
+  // 1. Get Population Statistics
+  const popMean = d3.mean(data2, d => d.hrs_worked);
+  const popSD = d3.deviation(data2, d => d.hrs_worked);
+  
+  // 2. Calculate Standard Error (The predicted width of the sampling distribution)
+  // Formula: Population SD / sqrt(n)
+  const se = popSD / Math.sqrt(sample_size2);
+
+  // 3. Determine range for the curve (centered on popMean)
+  const minX = popMean - (4 * se);
+  const maxX = popMean + (4 * se);
+  
+  // Create a smooth grid of X values
+  const grid = d3.range(minX, maxX, (maxX - minX) / 200);
+  
+  // Normal Density Function using Population Mean and Standard Error
+  const pdf = (x) => (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - popMean) / se, 2));
+  
+  return grid.map(x => ({x: x, y: pdf(x)}));
+}
+
+// 6. PLOT
+// 6. SIDE-BY-SIDE PLOTS WITH EXTERNAL LEGEND
+{
+  // --- A. SETUP VARIABLES ---
+  const popMean = d3.mean(data2, d => d.hrs_worked);
+  const n = sample_means2.length;
+  const bins = d3.bin().thresholds(20)(sample_means2);
+  
+  // NEW: Calculate fixed x-axis limits based on the Population Data
+  // This ensures the axis stays constant regardless of sample size
+  const xLimits = d3.extent(data2, d => d.hrs_worked);
+
+  // Define colors
+  const colorDomain = ["Sample Mean", "Population Mean", "Normal Curve"];
+  const colorRange = ["#D55E00", "black", "#CC79A7"];
+
+  // --- B. POPULATION PLOT (Left) ---
+  const popPlot = Plot.plot({
+    width: 450,
+    height: 400,
+    caption: "Population Distribution (Raw Data)",
+    marginTop: 40,
+    marginLeft: 50,
+    marginBottom: 40,
+    style: { fontSize: "14px", overflow: "visible" },
+    
+    marks: [
+      Plot.rectY(data2, Plot.binX({y: "count"}, {x: "hrs_worked", fill: "#E69F00", fillOpacity: 0.5})),
+    ],
+    // We explicitly set the domain here too, just to be safe and consistent
+    x: { label: "Hours worked", domain: xLimits }, 
+    y: { label: "Count" }
+  });
+
+  // --- C. SAMPLING DISTRIBUTION PLOT (Right) ---
+  const sampPlot = Plot.plot({
+    width: 450,
+    height: 400,
+    caption: `Sampling Distribution (n=${sample_size2})`,
+    marginTop: 40,
+    marginLeft: 50,
+    marginBottom: 40,
+    style: { fontSize: "14px", overflow: "visible" },
+    
+    color: {
+      domain: colorDomain,
+      range: colorRange,
+      legend: false
+    },
+    marks: [
+      Plot.rectY(bins, {
+        x1: "x0", x2: "x1", 
+        y: d => d.length / (n * (d.x1 - d.x0)), 
+        fill: "#56B4E9", fillOpacity: 0.5, tip: true,
+        title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
+      }),
+      Plot.line(normalCurve2, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
+      Plot.ruleX([d3.mean(sample_means2)], {stroke: () => "Sample Mean", strokeWidth: 3}),
+      Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
+    ],
+    // NEW: Apply the fixed population domain here
+    x: { label: "Sample Mean", tickFormat: ".1f", domain: xLimits }, 
+    y: { label: "Density" }
+  });
+
+  // --- D. LEGEND & LAYOUT ---
+  const myLegend = Plot.legend({
+    color: { domain: colorDomain, range: colorRange },
+    style: { marginBottom: "10px", fontSize: "14px" }
+  });
+
+  return html`
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 100%; max-width: 920px; display: flex; justify-content: flex-end;">
+      ${myLegend}
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+      <div>${popPlot}</div>
+      <div>${sampPlot}</div>
+    </div>
+  </div>`;
+}
+```
+
+---
+
+
+## Central Limit Theorem
+
+::: {.incremental}
+<div style="font-size: 150%;">
+
+
++ The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, as long as the sample size is big enough !!!
+
++ For many distributions, $n=30$ is sufficient, but for some distributions, a larger sample size may be required
+
+</div>
+
+:::
+
+---
+
+## A brief history 
+
+
+::: {.incremental}
+
+<div style="font-size: 115%;">
+
++ **1733**: Abraham de Moivre realizes that if you flip a coin enough times, the distribution of the number of heads looks like a Normal distribution^[[https://www.jstor.org/stable/2334818?seq=1#page_scan_tab_contents](https://www.jstor.org/stable/2334818?seq=1#page_scan_tab_contents)]
+
++ **1812**: Pierre-Simon Laplace resurrects the idea, showing that you can approximate the Binomial distribution with a Normal distribution^[[https://archive.org/details/theorieanaldepro00laplrich](https://archive.org/details/theorieanaldepro00laplrich)]
+
++ **1901**: Aleksandr Lyapunov provides the first rigorous proof of the CLT^[[https://www.tandfonline.com/doi/abs/10.1080/00207179208934258](https://www.tandfonline.com/doi/abs/10.1080/00207179208934258)] 
+
++ **1920s**: George Pólya first uses the term *Central Limit Theorem*^[[https://gdz.sub.uni-goettingen.de/id/PPN266833020_0008](https://gdz.sub.uni-goettingen.de/id/PPN266833020_0008)]
+
+</div>
+:::
+
+
 ## So what? 
 
 ::: {.incremental}
+
+<div style="font-size: 150%;">
+
 + Sample means from *any* distribution are approximately Normal (as long as sample size, $n$, is big enough)
   + Centered at the population mean
   + Spread = population SD / $\sqrt{n}$
 + Usually, all we have is a sample (not population values)
-+ Now we know the distribution of the sample mean, regardless of the distribution in the population
++ We know the distribution of the sample mean, regardless of the distribution in the population
 + We can then use this sampling distribution to learn about the population
+
+</div>
 
 ::: 
 
@@ -1070,33 +1118,30 @@ ggplot() +
 
 ::: {.incremental}
 
-+ We have data from the National Health and Nutrition Examination Survey in 2023-2023. 
+<div style="font-size: 115%;">
 
-+ There are `r nrow(protein_df23)` individuals whose protein intake was estimated from a dietary survey over 2 days. 
++ Data from the National Health and Nutrition Examination Survey in 2021-2023^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)]
 
-+ We treat these individuals as a sample^[*We will revisit this later] from the population (all Americans) 
++ There are `r nrow(protein_df23)` individuals whose protein intake was estimated from a dietary survey
+  + Mean protein: `r round(mean(protein_df23$protein_gm), 1)` grams per day
+
++ We treat these individuals as a sample^[We will revisit this later] from the population (all Americans) 
 
 + We can use the CLT to estimate the average in the population, and provide a range of plausible values for that estimate 
 
+</div>
 :::
  
----
-
-
-### How much protein do Americans eat, on average?
-
-
-```{r}
-#| echo: true
-protein_mean = mean(protein_df23$protein_gm); round(protein_mean, 1)
-protein_sd = sd(protein_df23$protein_gm); round(protein_sd, 1)
-```
 
 ---
 
 ### How much protein do Americans eat, on average?
 
 ```{r}
+#| cache: true
+
+protein_mean = mean(protein_df23$protein_gm)
+protein_sd = sd(protein_df23$protein_gm)
 protein_n = nrow(protein_df23)
 protein_se = protein_sd / sqrt(protein_n)
 q025 = protein_mean - 1.96 * protein_se
@@ -1114,7 +1159,19 @@ p1 = ggplot(grid, aes(x=x)) +
   geom_vline(aes(xintercept = protein_mean),linetype = "dashed") +
   annotate(geom="label",
            x = protein_mean, y = 0.65,
-           label=glue::glue("Mean = {round(protein_mean,1)} g"), size=5) 
+           label=glue::glue("Mean = {round(protein_mean,1)} g"), size=5) +
+  annotate(geom = "label",
+           x = protein_mean,
+           y = 0.2,
+           label = glue::glue("SD = {round(protein_se, 2)} g"), size = 5,
+           hjust = 0) +
+  annotate(geom = "segment", 
+           x = 75, xend = protein_mean, y = 0.3, yend = 0.3,
+          arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
+  annotate(geom = "segment", 
+           x = 75, xend = protein_mean + protein_se, y = 0.3, yend = 0.3,
+           arrow = arrow(length = unit(0.1, "inches"), type = "closed"))
+
 p1
 # If we think about all the sample means we could have gotten by sampling repeatedly, that forms a bell-shaped curve centered at `r round(sample_mean, 1)`, with standard deviation equal to the population standard deviation divided by the square root of the sample size
 ```
@@ -1124,6 +1181,7 @@ p1
 ### How much protein do Americans eat, on average?
 
 ```{r}
+#| cache: true
 
 y_val1 = qnorm(.025, mean = protein_mean,sd=protein_se)
 y_val2 = qnorm(.975, mean = protein_mean,sd=protein_se)
@@ -1151,16 +1209,19 @@ p1 +
 
 ::: {.incremental}
 
-+ We want to know if protein intake among Americans has changed from 2001 to 2023
+<div style="font-size: 115%;">
+
++ has protein intake among Americans has changed from 2001 to 2023?
 + We have two samples from the population 
-  + NHANES data from 2001 (mean: `r round(mean(protein_df01$protein_gm), 1)`)
+  + NHANES data from 2001^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001)] (mean: `r round(mean(protein_df01$protein_gm), 1)`)
   + NHANES data from 2023 (mean: `r round(protein_mean, 1)`)
 + We know the sample means are approximately Normally distributed 
   + It turns out that the **difference** in sample means is also Normally distributed 
   + Mean = difference in population means 
-  + SD: captures additional variation from difference 
+  + SD = sum of population standard deviations
 + So we can use the CLT! 
 
+</div>
 ::: 
 
 --- 
@@ -1181,7 +1242,7 @@ se01 = sd01 / sqrt(n01)
 grid = tibble(x = seq(min(mean01, protein_mean) - 5*protein_se, max(mean01, protein_mean) + 5*protein_se, length.out=200))
 
 
-p1 =
+p1a =
   ggplot(grid, aes(x=x)) + 
   stat_function(fun = dnorm, args = list(mean = protein_mean, sd = protein_se),
                 aes(color = "2023",fill ="2023"), linewidth = 1.1) +
@@ -1200,7 +1261,7 @@ p1 =
   theme(legend.position = "bottom", legend.text = element_text(size=14),
         legend.title = element_text(size=14)) +
   scale_x_continuous(breaks=seq(72,82, 1)) 
-p1
+p1a
 ```
 
 ---
@@ -1228,7 +1289,7 @@ pdiff = ggplot(grid, aes(x=x)) +
   geom_vline(aes(xintercept = difference), linetype = "dashed") +
   annotate(geom="label",
            x = difference, y = 0.45,
-           label=glue::glue("Mean difference = {round(difference,1)} g"), size=5) +
+           label=glue::glue("Observed difference = {round(difference,1)} g"), size=5) +
   geom_vline(aes(xintercept = 0),linetype = "dotted") 
 
 pdiff 
@@ -1252,7 +1313,7 @@ pdiff +
   geom_vline(aes(xintercept = difference), linetype = "dashed") +
    annotate(geom="label",
            x = difference, y = 0.45,
-           label=glue::glue("Mean difference = {round(difference,1)} g"), size=5) +
+           label=glue::glue("Observed difference = {round(difference,1)} g"), size=5) +
   # annotate(
   #   geom = "label",
   #   x = difference,
@@ -1269,21 +1330,22 @@ pdiff +
 
 ###  Do Americans eat more protein now than they did 20 years ago?
 
-We have strong evidence that protein intake has decreased an average of ~5g since 2001. 
+::: {.incremental}
 
----
+<div style="font-size: 150%;">
 
-### Does this mean anything? 
 
-</br>
++ We have strong evidence that protein intake has decreased an average of ~5g since 2001
+ 
++ Does it mean anything? 
 
-+ 1 egg
-+ 1 cup milk
-+ 1/3 cup Greek yogurt
-+ 1/4 cup nuts 
-+ 1/2 cup beans 
++ 7g of protein = 1 egg, 1 cup milk, 1/4 cup nuts 
+ 
 
-**Statistical vs. clinical significance**
++ **Statistical vs. clinical significance**
+
+</div>
+:::
 
 ---
 
@@ -1291,10 +1353,29 @@ We have strong evidence that protein intake has decreased an average of ~5g sinc
 ## When does the CLT fail? 
 
 
-+ Independence 
+::: {.incremental}
 
-+ NHANES caveat 
+<div style="font-size: 115%;">
+
++ **Independence Violation**
+  + If data are correlated (e.g., family members, time-series data), the spread of the data is not the same as predicted by the CLT 
+  + *NHANES Caveat:* Real survey data is not collected randomly and is correlated, requires adjustment using survey methodology 
++ **Sample Size vs. Skew**
+  + $n=30$ is a rule of thumb. Heavily skewed data requires larger $n$.
++ **Infinite Variance**
+  + Theoretical limitations (e.g., Cauchy distribution) where the CLT never applies.
+  
+</div>
+
+:::
 
 
+## Sir Francis Galton on the CLT: 
+
+<div style="font-size: 150%;">
 
 
+"The law would have been personified by the Greeks and deified, if they had known of it. It reigns with serenity and in complete self-effacement, amidst the wildest confusion. The huger the mob, and the greater the apparent anarchy, the more perfect is its sway. It is the supreme law of Unreason. Whenever a large sample of chaotic elements are taken in hand and marshalled in the order of their magnitude, an unsuspected and most beautiful form of regularity proves to have been latent all along."^[[https://galton.org/cgi-bin/searchImages/galton/search/books/natural-inheritance/pages/natural-inheritance_0073.htm](https://galton.org/cgi-bin/searchImages/galton/search/books/natural-inheritance/pages/natural-inheritance_0073.htm)]
+
+
+</div>

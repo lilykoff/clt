@@ -231,3 +231,12 @@ colnames(nh_2001) %in% colnames(nh_2021)
 combined = bind_rows(nh_2001, nh_2021)
 
 write_rds(combined, here::here("data", "processed", "nhanes_all.rds"))
+
+
+
+## occ 
+occ = read_rds(here::here("data", "processed", "occ_2021.rds"))
+
+occ %>% 
+  sjlabelled::label_to_colnames() %>% 
+  janitor::clean_names()

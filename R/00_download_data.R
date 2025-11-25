@@ -33,6 +33,12 @@ curl::curl_download(bp_1, destfile = here::here("data/raw/nhanes_2021_bpx.xpt"))
 ch_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TCHOL_L.xpt"
 curl::curl_download(ch_1, destfile = here::here("data/raw/nhanes_2021_tchol.xpt"))
 
+inc_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/INQ_L.xpt"
+curl::curl_download(inc_1, destfile = here::here("data/raw/nhanes_2021_inc.xpt"))
+
+ocq_1 = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/OCQ_L.xpt"
+curl::curl_download(ocq_1, destfile = here::here("data/raw/nhanes_2021_occ.xpt"))
+
 # cholesterol 
 
 ##### old 
