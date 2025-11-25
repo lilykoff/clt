@@ -11,6 +11,7 @@ format:
   revealjs:
     theme: custom.scss
     slide-number: true
+    footer: tinyurl.com/koffclt25
     toc: false
     progress: true
     hash: true
@@ -628,8 +629,7 @@ ss +
 
 + Normally distributed data is easy to work with
 + Most data isn't Normally distributed
-+ What if I take a sample of 50 people from a population of non-Normal data, and use that to estimate the population average? 
-+ Magic happens! 
++ It turns out that the **averages** of non-Normal data are Normal 
 
 </div> 
 
@@ -640,7 +640,7 @@ ss +
 
 ## Central Limit Theorem 
 
-```{r}
+```{r clt schematic}
 #| cache: true
 
 
@@ -691,7 +691,7 @@ ggplot() +
                fill = "black", alpha = 0.8) +
   geom_text(aes(x = 2, y = 9), label = "Population\nDistribution", 
             hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "black") +
-  geom_text(aes(x = 8.2, y = 8.5), label = "(Messy, Skewed,\nUnknown)", 
+  geom_text(aes(x = 8.2, y = 8.5), label = "(Unknown,\npotenially skewed)", 
             hjust = 0, vjust = 0.5, size = 5, color = "grey40", fontface = "italic") +
 
   # --- MIDDLE LAYER: SAMPLES ---
@@ -709,7 +709,7 @@ ggplot() +
                fill = "#CC79A7", alpha = 0.6) +
    geom_text(aes(x = 2, y = 1.5), label = "Sampling\nDistribution", 
             hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "#CC79A7") +
-  geom_text(aes(x = 7.2, y = 1.5), label = "(Clean, Normal,\nPredictable!)", 
+  geom_text(aes(x = 7.2, y = 1.5), label = "(Normal,\npredictable!)", 
             hjust = 0, vjust = 0.5, size = 5, color = "#CC79A7", fontface = "italic") +
 
   # --- ARROWS ---
@@ -990,8 +990,8 @@ normalCurve2 = {
 
   // --- B. POPULATION PLOT (Left) ---
   const popPlot = Plot.plot({
-    width: 450,
-    height: 400,
+    width: 550,
+    height: 500,
     caption: "Population Distribution (Raw Data)",
     marginTop: 40,
     marginLeft: 50,
@@ -1008,8 +1008,8 @@ normalCurve2 = {
 
   // --- C. SAMPLING DISTRIBUTION PLOT (Right) ---
   const sampPlot = Plot.plot({
-    width: 450,
-    height: 400,
+    width: 550,
+    height: 500,
     caption: `Sampling Distribution (n=${sample_size2})`,
     marginTop: 40,
     marginLeft: 50,
@@ -1056,6 +1056,8 @@ normalCurve2 = {
 }
 ```
 
+Other helpful interactives: [Stats calculators](https://www.statscalculators.com/resources/simulations/central-limit-theorem), [Seeing theory](https://seeing-theory.brown.edu/probability-distributions/index.html)
+
 ---
 
 
@@ -1072,6 +1074,25 @@ normalCurve2 = {
 </div>
 
 :::
+
+---
+
+## So what? 
+
+::: {.incremental}
+
+<div style="font-size: 150%;">
+
++ Sample means from *any* distribution are approximately Normal (as long as sample size, $n$, is big enough)
+  + Centered at the population mean
+  + Spread = population SD / $\sqrt{n}$
++ Usually, all we have is a sample (not population values)
++ We know the distribution of the sample mean, regardless of the distribution in the population
++ We can then use this sampling distribution to learn about the population
+
+</div>
+
+::: 
 
 ---
 
@@ -1094,25 +1115,7 @@ normalCurve2 = {
 :::
 
 
-## So what? 
-
-::: {.incremental}
-
-<div style="font-size: 150%;">
-
-+ Sample means from *any* distribution are approximately Normal (as long as sample size, $n$, is big enough)
-  + Centered at the population mean
-  + Spread = population SD / $\sqrt{n}$
-+ Usually, all we have is a sample (not population values)
-+ We know the distribution of the sample mean, regardless of the distribution in the population
-+ We can then use this sampling distribution to learn about the population
-
-</div>
-
-::: 
-
 ---
-
 
 ## Application: how much protein do Americans eat, on average? 
 
@@ -1137,7 +1140,7 @@ normalCurve2 = {
 
 ### How much protein do Americans eat, on average?
 
-```{r}
+```{r app1}
 #| cache: true
 
 protein_mean = mean(protein_df23$protein_gm)
@@ -1180,7 +1183,7 @@ p1
 
 ### How much protein do Americans eat, on average?
 
-```{r}
+```{r app2}
 #| cache: true
 
 y_val1 = qnorm(.025, mean = protein_mean,sd=protein_se)
@@ -1211,7 +1214,7 @@ p1 +
 
 <div style="font-size: 115%;">
 
-+ has protein intake among Americans has changed from 2001 to 2023?
++ Has protein intake among Americans has changed from 2001 to 2023?
 + We have two samples from the population 
   + NHANES data from 2001^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001)] (mean: `r round(mean(protein_df01$protein_gm), 1)`)
   + NHANES data from 2023 (mean: `r round(protein_mean, 1)`)
@@ -1230,7 +1233,7 @@ p1 +
 ### Do Americans eat more protein now than they did 20 years ago?
 
 
-```{r}
+```{r diff1}
 #| cache: true 
 
 mean01 = protein_df01$protein_gm %>% mean
@@ -1268,7 +1271,7 @@ p1a
 
 ### Do Americans eat more protein now than they did 20 years ago?
 
-```{r}
+```{r diff2}
 #| cache: true 
 
 sddiff = sqrt((protein_sd^2 / protein_n) + (sd01^2 / n01))
@@ -1300,7 +1303,7 @@ pdiff
 
 ### Do Americans eat more protein now than they did 20 years ago?
 
-```{r}
+```{r diff3}
 
 y_val1 = qnorm(.025, mean = difference, sd = sddiff)
 y_val2 = qnorm(.975, mean = difference, sd = sddiff)
