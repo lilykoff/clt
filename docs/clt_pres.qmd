@@ -1408,13 +1408,12 @@ pdiff +
 
 <div style="font-size: 115%;">
 
-+ **Independence Violation**
-  + If data are correlated (e.g., family members, time-series data), the spread of the data is not the same as predicted by the CLT 
-  + *NHANES Caveat:* Real survey data is not collected randomly and is correlated, requires adjustment using survey methodology 
-+ **Sample Size vs. Skew**
-  + $n=30$ is a rule of thumb. Heavily skewed data requires larger $n$.
-+ **Infinite Variance**
-  + Theoretical limitations (e.g., Cauchy distribution) where the CLT never applies.
++ **Identically distributed**: all observations come from the same underlying population 
+  + Violation: sample from U.S. and Europe 
++ **Independence**: the value of one observation must not influence the value of another
+  + Violation: NHANES (survey data). Survey data is not collected randomly and is therefore not independent (same members of household/neighborhood are sampled)
++ **Finite mean and  variance**: the underlying population must have a defined mean and variance
+  + Violation: some theoretical distributions (e.g., Cauchy) where the CLT never applies.
   
 </div>
 
