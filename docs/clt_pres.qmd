@@ -178,43 +178,6 @@ stocks = stocks %>%
 # Central <span style="color:gray;">Limit Theorem</span>
 
 
-
-
-
-## Central Limit Theorem 
-
-
-
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
-$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
-
-<br>
-
-Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
-
-<br>
-
----
-
-## Central Limit Theorem 
-
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
-$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
-
-<br>
-
-Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
-
-<br>
-
-As the sample size $n$ approaches infinity, the distribution of the sample mean converges to a Normal distribution:
-
-$$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
-
----
-
-
-
 ## Central Limit Theorem: Schematic 
 
 ```{r clt}
@@ -329,6 +292,43 @@ clt_plot
 
 
 ---
+
+
+
+## Central Limit Theorem 
+
+
+
+Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
+
+<br>
+
+Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
+
+<br>
+
+---
+
+## Central Limit Theorem 
+
+Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
+
+<br>
+
+Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
+
+<br>
+
+As the sample size $n$ approaches infinity, the distribution of the sample mean converges to a Normal distribution:
+
+$$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
+
+---
+
+
+
 
 ## Central Limit Theorem 
 
@@ -537,10 +537,16 @@ pn_1 = ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
   annotate(geom = "label", x = -1, y = 0.15, label = "Mean - 1 SD", size = 5) +
   # theme(axis.text.y = element_blank()) +
   labs(y = "Density", x = "Data (x)") +
-  scale_x_continuous(breaks = seq(-3, 3, 1))
+  scale_x_continuous(breaks = seq(-3, 3, 1)) 
 
 
-pn_1 
+pn_1 +
+  annotate(geom = "label", 
+           label = TeX("$P(-1 \\leq x \\leq 1) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-1}^{1} e^{-\\frac{1}{2}x^2} dx$"),
+           parse = TRUE,
+           x = 0, y = 0.1,
+           size = 4,
+           family = "sans")
 ```
 
 ---
@@ -611,11 +617,9 @@ pn_3
 
 <div style="font-size: 125%;">
 
-+ Symmetric 
-+ Described by two parameters: mean and standard deviation 
++ Symmetric; described by two parameters: mean and standard deviation 
 + **Standardization:** any Normal variable can be transformed into Normal with mean 0 and variance 1 (the standard Normal) by subtracting the mean and dividing by the SD: $X \sim N(\mu, \sigma^2) \quad \mathrm{ then } \quad  \frac{X - \mu}{\sigma} \sim N(0,1)$
 
-+ 68-95-99.7 rule tells us where most of data lie; furthermore: 
 + We can calculate the probability of the occurrence of any range of values 
 
 </div>
@@ -792,30 +796,6 @@ pplot =
 pplot
 ```
 
----
-
-### Sampling 
-
-::: {.incremental}
-
-<div style="font-size: 125%;">
-
-+ We saw the population of hours worked on the previous slide
-
-
-+ Now let's repeatedly take random selections of $n = 30$ people from that population. Each is a **sample**
-
-+ The individual observations of hours worked per week in these samples are the  $X_1, X_2, \dots, X_{n}$ in the CLT statement
-
-+ The expected value and variance of each observation in the sample are $E[X_i] =$ `r round(mhrs, 1)` and $Var(X_i) =$ `r round(varhrs, 0)`
-
-+ In each sample, we take the mean, this is $\bar{X}_n$ 
-
-+ Let's see what this looks like 
-
-</div>
-
-:::
 
 ---
 
@@ -1518,7 +1498,7 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 ::: {.incremental} 
 
-<div style="font-size: 150%;">
+<div style="font-size: 125%;">
 
 + If sample size is large enough, the distribution of sample means is approximately Normal
   + Mean: population mean
