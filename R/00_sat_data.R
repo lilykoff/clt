@@ -25,3 +25,19 @@ unzip(here::here("data/raw/sat_states.zip"), exdir = here::here("data/raw/sat_st
 file.remove(here::here("data/raw/sat_states.zip"))
 sat_score = read_csv(here::here("data/raw/sat_states/Guber1999data.csv"))
 write_rds(sat_score, here::here("data", "processed", "sat_states_1999.rds"))
+
+url = "https://www.kaggle.com/api/v1/datasets/download/goldenoakresearch/us-household-income-stats-geo-locations"
+curl::curl_download(url, destfile = here::here("data/raw/income.zip"), mode = "wb")
+unzip(here::here("data/raw/income.zip"), exdir = here::here("data/raw/income"))
+file.remove(here::here("data/raw/income.zip"))
+income = read_csv(here::here("data", "raw", "income", "kaggle_income.csv"))
+
+# https://www.kaggle.com/datasets/shiveshprakash/34-year-daily-stock-data
+url = "https://www.kaggle.com/api/v1/datasets/download/shiveshprakash/34-year-daily-stock-data"
+curl::curl_download(url, destfile = here::here("data/raw/stocks.csv"))
+stocks = read_csv(here::here("data", "raw", "stocks.csv"))
+write_rds(stocks, here::here("data", "processed", "stocks.rds"))
+
+
+
+  

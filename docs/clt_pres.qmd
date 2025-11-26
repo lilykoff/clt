@@ -42,6 +42,7 @@ library(emoGG)
 library(viridis)
 library(cowplot)
 library(geomtextpath)
+library(latex2exp)
 # https://tinyurl.com/koffclt25
 ```
 
@@ -82,7 +83,6 @@ scale_fill_okabe  <- function(...) scale_fill_manual(values = okabe_ito, ...)
 #| include: false 
 
 sat_score = read_rds(here::here("data", "processed","sat_2017.rds"))
-sat_states = read_rds(here::here("data", "processed","sat_states_1999.rds"))
 nh_data = read_rds(here::here("data", "processed", "nhanes_all.rds")) %>% 
   mutate(year = if_else(grepl("NHANES 2001-2002", data_release_cycle), "2001", "2023")) %>% 
   filter(!is.nan(protein_gm))
@@ -126,36 +126,62 @@ work_df = read_rds(here::here("data", "processed", "occ_2021.rds")) %>%
 
 # write_csv(work_df, here::here("docs", "work_df.csv"))
 
-  
+stocks = read_rds(here::here("data", "processed", "stocks.rds"))
 ```
 
 ## Central Limit Theorem (CLT)
+
+Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
+
+<br>
+
+Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
+
+<br>
+
+---
+
+
+## Central Limit Theorem (CLT)
+
+Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
+
+<br>
+
+Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
+
+<br>
+**The Theorem:**
+As the sample size $n$ approaches infinity, the distribution of the sample mean converges to a Normal distribution:
+
+$$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma}{\sqrt{n}}\right)$$
+
+---
+
+## Central Limit Theorem: Schematic 
+
 ```{r clt}
 #| cache: true
-
-# 1. GENERATE SHAPES DATA
+# 1. GENERATE SHAPES DATA (Same as before)
 set.seed(42)
 
 # --- Top: Skewed Population ---
-# Generate skewed data and density
 pop_dist = rbeta(10000, 2, 5) 
 d_pop = density(pop_dist)
-# Scale density to fit in the top part of the plot (Y: 7.5 to 9.5)
 df_pop = tibble(x = d_pop$x, y = d_pop$y)
-df_pop$x_scaled = scales::rescale(df_pop$x, to = c(2, 8)) # Center horizontally
-df_pop$y_scaled = scales::rescale(df_pop$y, to = c(7.5, 9.5)) # Top vertical position
+df_pop$x_scaled = scales::rescale(df_pop$x, to = c(2, 8)) 
+df_pop$y_scaled = scales::rescale(df_pop$y, to = c(7.5, 9.5)) 
 
 # --- Bottom: Normal Sampling Distribution ---
-# Generate normal data and density
 norm_dist = rnorm(10000)
 d_norm = density(norm_dist)
-# Scale density to fit in bottom part (Y: 0.5 to 2.5)
 df_norm = data.frame(x = d_norm$x, y = d_norm$y)
-df_norm$x_scaled = scales::rescale(df_norm$x, to = c(3, 7)) # Center, narrower
-df_norm$y_scaled = scales::rescale(df_norm$y, to = c(0.5, 2.5)) # Bottom vertical position
+df_norm$x_scaled = scales::rescale(df_norm$x, to = c(3, 7)) 
+df_norm$y_scaled = scales::rescale(df_norm$y, to = c(0.5, 2.5)) 
 
 # --- Middle: Sample Buckets ---
-# Coordinates for 3 sample boxes
 samples_df = tibble(
   id = c("Sample 1", "Sample 2", "Sample 3"),
   x_center = c(2.5, 5, 7.5),
@@ -164,7 +190,14 @@ samples_df = tibble(
   height = 1.2
 )
 
-# Random dots for inside the buckets
+# --- NEW: Mean Labels Data (LOWERED) ---
+means_df = tibble(
+  x = c(2.5, 5, 7.5),
+  y = 3.2,  # <--- MOVED DOWN from 3.6
+  label = c("bar(x)[1]", "bar(x)[2]", "bar(x)[3]")
+)
+
+# Random dots
 dots_df = samples_df %>% 
   rowwise() %>% 
   mutate(
@@ -182,27 +215,37 @@ clt_plot = ggplot() +
             hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "black") +
   geom_text(aes(x = 8.2, y = 8.5), label = "(Unknown,\npotenially skewed)", 
             hjust = 0, vjust = 0.5, size = 5, color = "grey40", fontface = "italic") +
-
+  
   # --- MIDDLE LAYER: SAMPLES ---
-  # Draw rectangles for buckets
   geom_tile(data = samples_df, aes(x = x_center, y = y_center, width = width, height = height),
             fill = "#f6f5f3", color = "#E69F00", linewidth = 1.5) +
-  # Add dots inside
   geom_point(data = dots_df, aes(x = dots_x, y = dots_y), 
              color = "#E69F00", size = 2, alpha = 0.7) +
   geom_text(data = samples_df, aes(x = x_center, y = y_center - 0.9, label = id),
             size = 5, fontface = "bold", color = "#E69F00") +
   
+  # --- NEW: CALCULATE MEAN STEP ---
+  # 1. Labels
+  geom_text(data = means_df, aes(x = x, y = y, label = label),
+            parse = TRUE, size = 8, color = "#D55E00", fontface = "bold") +
+  # 2. Arrows from Bucket -> Mean (LENGTHENED)
+  geom_segment(aes(x = 2.5, xend = 2.5, y = 3.8, yend = 3.6), # <--- STRETCHED DOWN (was 3.9)
+               arrow = arrow(length = unit(0.15, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = 5, xend = 5, y = 3.8, yend = 3.6),
+               arrow = arrow(length = unit(0.15, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = 7.5, xend = 7.5, y = 3.8, yend = 3.6),
+               arrow = arrow(length = unit(0.15, "cm")), color = "#D55E00") +
+  
   # --- BOTTOM LAYER: SAMPLING DIST ---
   geom_polygon(data = df_norm, aes(x = x_scaled, y = y_scaled), 
                fill = "#CC79A7", alpha = 0.6) +
-   geom_text(aes(x = 2, y = 1.5), label = "Sampling\nDistribution", 
+  geom_text(aes(x = 2, y = 1.5), label = "Distribution of\nthe sample mean", 
             hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "#CC79A7") +
   geom_text(aes(x = 7.2, y = 1.5), label = "(Normal,\npredictable!)", 
             hjust = 0, vjust = 0.5, size = 5, color = "#CC79A7", fontface = "italic") +
-
+  
   # --- ARROWS ---
-  # Arrows Down from Pop to Samples
+  # Top Arrows: Pop -> Samples (Unchanged)
   geom_curve(aes(x = 5, y = 7.5, xend = 2.5, yend = 5.7), 
              arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
   geom_curve(aes(x = 5, y = 7.5, xend = 5, yend = 5.7), 
@@ -210,18 +253,21 @@ clt_plot = ggplot() +
   geom_curve(aes(x = 5, y = 7.5, xend = 7.5, yend = 5.7), 
              arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60") +
   
-  # Arrows Converging to Sampling Dist
-  geom_curve(aes(x = 2.5, y = 4.3, xend = 5, yend = 2.6), 
+  # Bottom Arrows: MEANS -> Sampling Dist (ADJUSTED START POINT)
+  # Origin is now y = 2.9 (below the new mean label position)
+  geom_curve(aes(x = 2.7, y = 2.8, xend = 4.9, yend = 2.6), # <--- MOVED DOWN from 3.3
              arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60") +
-  geom_curve(aes(x = 5, y = 4.3, xend = 5, yend = 2.6), 
+  geom_curve(aes(x = 5, y = 2.9, xend = 5, yend = 2.6), 
              arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60") +
-  geom_curve(aes(x = 7.5, y = 4.3, xend = 5, yend = 2.6), 
+  geom_curve(aes(x = 7.5, y = 2.9, xend = 5.1, yend = 2.6), 
              arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
-
+  
   # --- THEME ---
   xlim(0, 10) + ylim(0, 10) +
   theme_void() +
   theme(plot.background = element_rect(fill = "#f6f5f3", color = NA))
+
+
 clt_plot
 ```
 
@@ -255,9 +301,9 @@ clt_plot
 
 + Mean: average, center of data
 
-+ Standard deviation (SD): measure of spread of data; average squared distance from mean
++ Standard deviation (SD): measure of spread of data; square root of average squared distance from mean
 
-+ (Probability) distribution: mathematically describes possible values for a variable and how often they occur
++ (Probability) distribution: mathematically describes possible values for a random variable and how often they occur
 
 </div>
 :::
@@ -280,7 +326,20 @@ p_normal =
   labs(y = "Density", x = "Data (x)") +
   scale_x_continuous(breaks = seq(-3, 3, 1))
 
-p_normal 
+p_normal +
+  annotate(geom = "curve",
+           x = 2, xend = .8, y = 0.3, yend = 0.2,
+           curvature= -0.2,
+           arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
+  annotate(geom = "label",
+           x = 2, y = 0.3, size = 5,
+           label = "Area under curve = 1") +
+  annotate(geom = "label", 
+           x = -2.2, y = 0.3, 
+           label = "'f(x)' == frac(1, sqrt(2 * pi)) * e^{-frac(x^2, 2)}", 
+           parse = TRUE, 
+           size = 5, 
+           color = "black")
 ```
 
 
@@ -334,21 +393,6 @@ sat_score %>%
 
 ---
 
-## What's special about the Normal distribution? 
-
-::: {.incremental}
-
-<div style="font-size: 150%;">
-
-+ Symmetric 
-+ Described by two parameters: mean and standard deviation 
-+ 68-95-99.7 rule tells us where most of data lie 
-+ We can calculate probabilities of values occurring within the distribution
-
-</div>
-:::
-
----
 
 
 ### Mean: shifts left/right
@@ -525,16 +569,25 @@ pn_3
 ```
 
 
+## What's special about the Normal distribution? 
 
+::: {.incremental}
 
+<div style="font-size: 150%;">
 
-# If we know data are Normally distributed, we can make statements about the values in the distribution
++ Symmetric 
++ Described by two parameters: mean and standard deviation 
++ **Standardization:** Any Normal curve can be transformed into Normal with mean 0 and variance 1 (the standard Normal), $\frac{X - \mu}{\sigma} \sim N(0,1)$
++ 68-95-99.7 rule tells us where most of data lie 
++ **If we know data are Normally distributed, we can make statements about the values in the distribution**
 
+</div>
+:::
 
 
 ---
 
-### SAT Scores
+### Example: SAT Scores
 
 ```{r sat2}
 #| cache: true
@@ -551,7 +604,7 @@ sat_score %>%
 
 ---
 
-### SAT Scores 
+### Example: SAT Scores 
 
 ```{r sat again}
 #| cache: true 
@@ -609,7 +662,8 @@ sat_df %>%
 #| cache: true 
 
 
-sat_df %>% 
+sat2 = 
+  sat_df %>% 
   ggplot(aes(x = value)) +
   labs(x = "SAT Score", y = "Count of students", title = "SAT Scores among US high school students",
        subtitle = "2017") +
@@ -631,9 +685,26 @@ sat_df %>%
            curvature = -0.25,
            arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
   annotate(geom = "label", x= 1400, y = 130000,
-           label = "Probability of scoring 1200 or higher:\nshaded area under curve, ~18%")
+           label = "Probability of scoring 1200 or higher:\nshaded area under curve, ~18%") 
+
+sat2
+## add math 
+```
 
 
+---
+
+### SAT Scores
+
+```{r sat math}
+#| cache: true 
+
+
+sat2 + annotate(geom = "label", x = 1400, y = 100000,
+           label = TeX("$P(score \\geq 1200) = \\frac{1}{\\sigma\\sqrt{2\\pi}} \\int_{1200}^{\\infty} e^{-\\frac{1}{2}(\\frac{x-\\mu}{\\sigma})^2} dx$"),
+           parse = TRUE,
+           size = 4,
+           family = "sans")
 ```
 
 
@@ -641,37 +712,30 @@ sat_df %>%
 
 ---
 
-### Weight 
+### Caffeine intake 
 
-```{r weight}
+```{r caffeine }
+nh_joined %>% 
+  filter(year == 2023) %>% 
+  mutate(caffeine = if_else(caffeine_mg > 1000, 1000, caffeine_mg)) %>% 
+  ggplot(aes(x = caffeine)) +
+  geom_histogram( fill = "#56B4E9", color = "black", binwidth=25) +
+  labs(x = "Daily caffeine intake (mg)", y = "Count of individuals", title = "Caffeine Intake among U.S. Adults, 2023") +
+  scale_x_continuous(breaks=seq(0,1000,50))
+```
+
+---
+
+### Stock Market
+
+```{r stocks}
 #| cache: true 
-
-pdens= 
-  bmx_joined %>% 
-  filter(age_in_years_at_screening >= 18) %>% 
-  mutate(weight_lbs = weight_kg * 2.2) %>% 
-  ggplot(aes(x = weight_lbs, color = gender, fill = gender)) + 
-  facet_wrap(.~gender, scales = "free") + 
-  geom_density(linewidth = 1.3, alpha = 0.5) + 
-  scale_color_manual(values = c("#009E73","#CC79A7")) +
-  scale_fill_manual(values = c("#009E73","#CC79A7")) +
-  scale_x_continuous(breaks=seq(100, 500, 50)) +
-  labs(x = "Weight (lbs)", y = "Density", title = "Weight among American adults",
-       subtitle = "From the 2023 National Health and Nutrition Examination Survey") +
-  theme(legend.position = "none") 
-
-bmx_joined %>% 
-  filter(age_in_years_at_screening >= 18) %>% 
-  mutate(weight_lbs = weight_kg * 2.2) %>% 
-  ggplot(aes(x = weight_lbs, fill = gender)) + 
-  facet_wrap(.~gender) + 
-  geom_histogram(color= "black",binwidth = 30) +
-  # scale_color_manual(values = c("#009E73","#CC79A7")) +
-  scale_fill_manual(values = c("#009E73","#CC79A7")) +
-  scale_x_continuous(breaks=seq(100, 500, 50)) +
-  labs(x = "Weight (lbs)", y = "Number of Individuals", title = "Weight among American adults",
-       subtitle = "From the 2023 National Health and Nutrition Examination Survey") +
-  theme(legend.position = "none") 
+stocks %>% 
+  ggplot(aes(x = sp500_volume)) + 
+  geom_histogram(color= "black", fill = "#56B4E9") +
+  labs(x = "S&P500 daily volume", y = "Number of days", title = "S&P Volume: 1990-2024") +
+  theme(legend.position = "none") +
+  scale_x_continuous(labels = scales::comma)
 ```
 
 ---
@@ -687,8 +751,7 @@ bmx_joined %>%
   geom_histogram(binwidth = 1,
                  fill = "#56B4E9", color = "black") +
   scale_x_continuous(breaks=seq(0, 10, 1)) +
-  labs(x = "Number of people in houeshold", y = "Number of households", title = "Household size among American adults",
-       subtitle = "From the 2023 National Health and Nutrition Examination Survey") +
+  labs(x = "Number of people in houeshold", y = "Number of households", title = "U.S. Household Size, 2023") +
   theme(legend.position = "none") 
 ```
 
@@ -706,8 +769,7 @@ pplot =
   geom_histogram(binwidth = 5,
                  fill = "#56B4E9", color = "black") +
   scale_x_continuous(breaks=seq(0, 80, 5)) +
-  labs(x = "Number of hours worked per week", y = "Number of individuals", title = "Weekly hours worked among American adults",
-       subtitle = "From the 2023 National Health and Nutrition Examination Survey") +
+  labs(x = "Number of hours worked per week", y = "Number of individuals", title = "Weekly Hours Worked among U.S. Adults, 2023") +
   theme(legend.position = "none") 
 
 pplot
@@ -715,50 +777,16 @@ pplot
 
 ---
 
-### Mean SAT scores by state 
-
-```{r statesat}
-#| cache: true
-
-
-ss = sat_states %>% 
-  ggplot(aes(x = SATT)) +
-  geom_histogram(color = "black", fill = "#56B4E9", binwidth = 25) +
-  labs(x = "SAT Score", y = "Count of states", title = "Mean SAT Scores by State",
-       subtitle = "1999") +
-  scale_x_continuous(breaks=seq(800,1100, 50)) +
-  scale_y_continuous(breaks=seq(0,15,5), limits=c(0,15))
-
-ss
-
-```
-
----
-
-### Mean SAT scores by state 
-
-```{r statesat2}
-#| cache: true
-
-ss +
-  annotate(geom = "curve",
-           x = 925, xend = 900, y = 7.5, yend= 10,
-           curvature = 0.2, 
-           arrow = arrow(length = unit(0.1, "inches"), type = "closed"))+
-  annotate(geom= "label", x= 925, y=7.8,
-           label = "Maine: 896", size = 5, hjust = 0)
-```
-
----
-
-## The problem
+## Recap so far
 
 ::: {.incremental}
 <div style="font-size: 150%;">
 
 + Normally distributed data is easy to work with
 + Most data isn't Normally distributed
-+ It turns out that the **averages** of non-Normal data are Normal 
++ The CLT says that the **distribution of sample means** is Normal, even if the population isn't Normal 
++ Often we care about the average, and we only have a sample, so this is very useful! 
++ Let's explore what we mean by "distribution of sample means''
 
 </div> 
 
@@ -767,29 +795,18 @@ ss +
 
 ---
 
-## Central Limit Theorem 
-
-```{r clt schematic}
-#| cache: true
-
-clt_plot
-```
-
-
----
-
-## Sampling experiment
+## Sampling example
 
 ::: {.incremental}
 <div style="font-size: 150%;">
 
-+ Imagine we know the hours worked for every adult in the U.S. This is the **population**
++ Imagine we know the hours worked for every adult in the U.S. This is the **population**.
 
-+ We saw before that this data is not Normal
++ Now let's repeatedly take random selections of 30 people from that population. Each is a **sample**.
 
-+ Now let's pretend we *don't* have data on every person, we just have a random selection of 50 people from that population. This is a **sample**
++ In each sample, we take the mean
 
-+ What does the distribution of the samples look like? 
++ Distribution of sample means is the sampling distribution 
 
 </div>
 :::
@@ -933,8 +950,21 @@ plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
 
 ```
 
-# What does the distribution of these sample means look like? 
+## Sampling 
 
+::: {.incremental}
+
+<div style="font-size: 150%;">
+
++ We got a different mean in each sample 
+
++ How uncertain are we about the true population mean based on one sample?
+
++ The CLT quantifies this uncertainty
+
+</div>
+
+::: 
 ---
 
 
@@ -1096,7 +1126,7 @@ normalCurve2 = {
 }
 ```
 
-Other helpful interactives: [Stats calculators](https://www.statscalculators.com/resources/simulations/central-limit-theorem), [Seeing theory](https://seeing-theory.brown.edu/probability-distributions/index.html)
+Other helpful interactive demonstrations: [Stats calculators](https://www.statscalculators.com/resources/simulations/central-limit-theorem), [Seeing theory](https://seeing-theory.brown.edu/probability-distributions/index.html)
 
 ---
 
@@ -1104,37 +1134,26 @@ Other helpful interactives: [Stats calculators](https://www.statscalculators.com
 ## Central Limit Theorem
 
 ::: {.incremental}
-<div style="font-size: 150%;">
+<div style="font-size: 115%;">
 
 
-+ The distribution of the sample means is approximately Normal, regardless of the shape of the population distribution, as long as the sample size is big enough !!!
++ As sample size goes to infinity, the distribution of sample means approaches a Normal distribution^[Under some conditions] with:
 
   + Mean: population mean
-  + SD: population SD / $\sqrt{n}$
+  + SD: population SD / $\sqrt{n}$ (standard error of the mean)
+
++ In practice: if sample size is large enough, the distribution of sample means is approximately normal, with mean and SD as above
 
 + What's big enough? 
   + For many distributions, $n=30$ is sufficient, but for some distributions, a larger sample size may be required
+
++ We can use the theoretical properties of the sampling distribution to make statements about the population
 
 </div>
 
 :::
 
----
 
-## So what? 
-
-::: {.incremental}
-
-<div style="font-size: 150%;">
-
-
-+ Usually, all we have is a sample (not population values)
-+ From CLT, we know the distribution of the sample mean, regardless of the distribution in the population
-+ We can then use this sampling distribution to learn about the population
-
-</div>
-
-::: 
 
 ---
 
@@ -1162,7 +1181,6 @@ Other helpful interactives: [Stats calculators](https://www.statscalculators.com
 ## Application: how much protein do Americans eat, on average? 
 
 ::: {.incremental}
-<div style="font-size: 115%;">
 
 
 + Data from the National Health and Nutrition Examination Survey in 2021-2023^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)]
@@ -1171,14 +1189,13 @@ Other helpful interactives: [Stats calculators](https://www.statscalculators.com
   + Mean: `r round(mean(protein_df23$protein_gm), 1)` grams per day
   + SD: `r round(sd(protein_df23$protein_gm), 1)` grams per day
 
-+ We treat these individuals as a sample^[We will revisit this later] from the population (all Americans) 
++ These individuals are a sample from the population (all Americans) 
 
 + What is the distribution of the sample mean? 
   + Mean = ?
   + SD = ?
 
-+ We can use the CLT to estimate the average in the population, and provide a range of plausible values for that estimate 
-</div>
++ We will use the CLT to estimate the average in the population, and provide a range of plausible values for that estimate (confidence intervals)
 
 :::
  
@@ -1267,7 +1284,8 @@ p1 +
   + NHANES data from 2001^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001)] (mean: `r round(mean(protein_df01$protein_gm), 1)`)
   + NHANES data from 2023 (mean: `r round(protein_mean, 1)`)
 + We know the sample means are approximately Normally distributed 
-  + It turns out that the **difference** in sample means is also Normally distributed 
+  + Linear combination of Normally distributed variables are also Normal
+  + **Difference** in sample means is also Normally distributed 
   + Mean: difference in population means 
   + SD: square root of sum of variances in each sampling distribution 
 + So we can use the CLT! 
@@ -1364,7 +1382,7 @@ pdiff +
   geom_vline(aes(xintercept = difference), linetype = "dashed") +
    annotate(geom="label",
            x = difference, y = 0.45,
-           label=glue::glue("Observed difference = {round(difference,1)} g"), size=5) +
+           label=glue::glue("Mean difference = {round(difference,1)} g"), size=5) +
   # annotate(
   #   geom = "label",
   #   x = difference,
@@ -1390,7 +1408,7 @@ pdiff +
  
 + Does it mean anything? 
 
-+ 7g of protein = 1 egg, 1 cup milk, 1/4 cup nuts 
++ 5g of protein = 3/5 of an egg, 3/5 cup milk, 3 tbsp nuts, 1 burrito-size flour tortilla 
  
 
 + **Statistical vs. clinical significance**
@@ -1401,19 +1419,21 @@ pdiff +
 ---
 
 
-## When does the CLT fail? 
+## What assumptions do we need for CLT? 
 
 
 ::: {.incremental}
 
 <div style="font-size: 115%;">
 
++ **Independence**: the value of one observation must not influence the value of another
+  + Violation: siblings, household members, eyes
+  
 + **Identically distributed**: all observations come from the same underlying population 
   + Violation: sample from U.S. and Europe 
-+ **Independence**: the value of one observation must not influence the value of another
-  + Violation: NHANES (survey data). Survey data is not collected randomly and is therefore not independent (same members of household/neighborhood are sampled)
+
 + **Finite mean and  variance**: the underlying population must have a defined mean and variance
-  + Violation: some theoretical distributions (e.g., Cauchy) where the CLT never applies.
+  + Violation: some theoretical distributions (e.g., Cauchy) where the CLT never applies; not common in real data
   
 </div>
 
@@ -1422,10 +1442,10 @@ pdiff +
 
 ## Sir Francis Galton on the CLT: 
 
-<div style="font-size: 150%;">
+<div style="font-size: 200%;">
 
 
-"The law would have been personified by the Greeks and deified, if they had known of it. It reigns with serenity and in complete self-effacement, amidst the wildest confusion. The huger the mob, and the greater the apparent anarchy, the more perfect is its sway. It is the supreme law of Unreason. Whenever a large sample of chaotic elements are taken in hand and marshalled in the order of their magnitude, an unsuspected and most beautiful form of regularity proves to have been latent all along."^[[https://galton.org/cgi-bin/searchImages/galton/search/books/natural-inheritance/pages/natural-inheritance_0073.htm](https://galton.org/cgi-bin/searchImages/galton/search/books/natural-inheritance/pages/natural-inheritance_0073.htm)]
+"The law would have been personified by the Greeks and deified, if they had known of it. It reigns with serenity and in complete self-effacement, amidst the wildest confusion. The huger the mob, and the greater the apparent anarchy, the more perfect is its sway."^[[https://galton.org/cgi-bin/searchImages/galton/search/books/natural-inheritance/pages/natural-inheritance_0073.htm](https://galton.org/cgi-bin/searchImages/galton/search/books/natural-inheritance/pages/natural-inheritance_0073.htm)]
 
 
 </div>
