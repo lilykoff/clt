@@ -146,7 +146,7 @@ stocks = stocks %>%
 <div style="font-size: 150%;">
 
 1. Understand the statement of the CLT
-2. Understand how the CLT is used in practice
+2. Use the CLT to answer a public health question
   
 </div>
   
@@ -157,13 +157,13 @@ stocks = stocks %>%
 
 <div style="font-size: 150%;">
 
-+ Mean: average, center of data 
++ **Mean**: average, center of data 
 
-+ Variance: measure of spread of data; based on average squared distance from mean
++ **Variance**: measure of spread of data; based on average squared distance from mean
 
-+ Standard deviation: square root of variance 
++ **Standard deviation**: square root of variance 
 
-+ (Probability) distribution: mathematically describes possible values for a random variable and how often they occur
++ **Distribution**: mathematically describes possible values for a random variable and how often they occur
 
 </div>
 
@@ -290,6 +290,14 @@ clt_plot = ggplot() +
 clt_plot
 ```
 
+::: {.notes}
+Roadmap 
+Population: messy and unkonwn
+We take samples - this is what we actually see 
+We take the mean of each sample 
+The CLT tells us that regardless of what the top layer looks like, the distribution of the average, converges to a Normal distribution
+This is important because we ONLY see the sample mean, and we want to quantify the uncertainty around it -- how good of a guess is it for our population mean? 
+:::
 
 ---
 
@@ -359,7 +367,7 @@ p_normal =
             xlim = c(-3.2, 3.2), fill = "#56B4E9", alpha = 0.5) +
   stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1) +
   # theme(axis.text.y = element_blank())+
-  labs(y = "Density", x = "Data (x)") +
+  labs(y = "Density f(x)", x = "Data (x)", title = "Normal distribution with mean 0, variance 1") +
   scale_x_continuous(breaks = seq(-3, 3, 1))
 
 p_normal +
@@ -489,8 +497,8 @@ ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
   stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
                 linewidth = 1.1) +
   scale_x_continuous(breaks = seq(-3, 3, 1)) +
-  geom_vline(aes(xintercept = 0), linetype = "dashed") +
-  annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0", size = 8) 
+  geom_vline(aes(xintercept = 0), linetype = "dashed") 
+  # annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0", size = 8) 
   
 
 
@@ -575,7 +583,13 @@ pn_2 =
   annotate(geom = "label", x = -2, y = 0.025, label = "Mean - 2 SD", size = 5) 
 
 
-pn_2 
+pn_2 +
+  annotate(geom = "label", 
+           label = TeX("$P(-2 \\leq x \\leq 2) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-2}^{2} e^{-\\frac{1}{2}x^2} dx$"),
+           parse = TRUE,
+           x = 0, y = 0.1,
+           size = 4,
+           family = "sans")
 ```
 
 ---
@@ -606,7 +620,13 @@ pn_3 = pn_2 +
 
 
 
-pn_3
+pn_3 +
+  annotate(geom = "label", 
+           label = TeX("$P(-3 \\leq x \\leq 3) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-3}^{3} e^{-\\frac{1}{2}x^2} dx$"),
+           parse = TRUE,
+           x = 0, y = 0.04,
+           size = 4,
+           family = "sans")
 ```
 
 ---
@@ -615,16 +635,23 @@ pn_3
 
 ::: {.incremental}
 
-<div style="font-size: 125%;">
+<div style="font-size: 150%;">
 
-+ Symmetric; described by two parameters: mean and standard deviation 
-+ **Standardization:** any Normal variable can be transformed into Normal with mean 0 and variance 1 (the standard Normal) by subtracting the mean and dividing by the SD: $X \sim N(\mu, \sigma^2) \quad \mathrm{ then } \quad  \frac{X - \mu}{\sigma} \sim N(0,1)$
++ **Simplicity:** Symmetric and fully described by just two parameters ($\mu, \sigma$)
 
-+ We can calculate the probability of the occurrence of any range of values 
++ **Universality:** Any Normal variable can be mapped to the Standard Normal: $$\mathrm{if} \quad X \sim N(\mu, \sigma^2) \quad \mathrm{ then } \quad \frac{X - \mu}{\sigma} \sim N(0,1)$$
 
++ **Calculable** We can easily calculate probabilities (areas under the curve) for any range of values
 </div>
 :::
 
+::: {.notes}
+
+Because of the math you see here  we can turn any normal distribution—whether it's height, test scores, or protein—into a single universal curve; compare data on same scale
+
+Because the shape is known, we can calculate the exact probability of any event.
+
+:::
 
 ---
 
@@ -1044,7 +1071,7 @@ normalCurve2 = {
   const xLimits = d3.extent(data2, d => d.hrs_worked);
 
   // Define colors
-  const colorDomain = ["Sample Mean", "Population Mean", "Normal Curve"];
+  const colorDomain = ["Sampling Distribution Mean", "Population Mean", "Normal Curve"];
   const colorRange = ["#D55E00", "black", "#CC79A7"];
 
   // --- B. POPULATION PLOT (Left) ---
@@ -1088,7 +1115,7 @@ normalCurve2 = {
         title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
       }),
       Plot.line(normalCurve2, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
-      Plot.ruleX([d3.mean(sample_means2)], {stroke: () => "Sample Mean", strokeWidth: 3}),
+      Plot.ruleX([d3.mean(sample_means2)], {stroke: () => "Sampling Distribution Mean", strokeWidth: 3}),
       Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
     ],
     // NEW: Apply the fixed population domain here
@@ -1202,7 +1229,7 @@ normalCurve = {
   const xLimits = d3.extent(data, d => d.caffeine);
 
   // Define colors
-  const colorDomain = ["Sample Mean", "Population Mean", "Normal Curve"];
+  const colorDomain = ["Sampling Distribution Mean", "Population Mean", "Normal Curve"];
   const colorRange = ["#D55E00", "black", "#CC79A7"];
 
   // --- B. POPULATION PLOT (Left) ---
@@ -1246,7 +1273,7 @@ normalCurve = {
         title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
       }),
       Plot.line(normalCurve, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
-      Plot.ruleX([d3.mean(sample_means)], {stroke: () => "Sample Mean", strokeWidth: 3}),
+      Plot.ruleX([d3.mean(sample_means)], {stroke: () => "Sampling Distribution Mean", strokeWidth: 3}),
       Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
     ],
     // NEW: Apply the fixed population domain here
@@ -1359,7 +1386,7 @@ normalCurve_stock = {
   const xLimits = d3.extent(stock, d => d.sp500_volume);
 
   // Define colors
-  const colorDomain = ["Sample Mean", "Population Mean", "Normal Curve"];
+  const colorDomain = ["Sampling Distribution Mean", "Population Mean", "Normal Curve"];
   const colorRange = ["#D55E00", "black", "#CC79A7"];
 
   // --- B. POPULATION PLOT (Left) ---
@@ -1403,7 +1430,7 @@ normalCurve_stock = {
         title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
       }),
       Plot.line(normalCurve_stock, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
-      Plot.ruleX([d3.mean(sample_means_stock)], {stroke: () => "Sample Mean", strokeWidth: 3}),
+      Plot.ruleX([d3.mean(sample_means_stock)], {stroke: () => "Sampling Distribution Mean", strokeWidth: 3}),
       Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
     ],
     // NEW: Apply the fixed population domain here
@@ -1464,11 +1491,14 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 ::: {.incremental}
 <div style="font-size: 150%;">
 
-+ Sample means behave more normally than the population
++ Sample means behave predictably 
 
-+ Works even for really weirdly shaped distributions 
++ Works even for really weirdly shaped population distributions 
 
 + Requires minimal assumptions (which we'll discuss later)
+
++ Intuition: extreme values are rare
+
 </div> 
 
 :::
@@ -1494,27 +1524,34 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 ---
 
-## How do we use it? 
 
-::: {.incremental} 
+
+## Theory to Practice
+
+::: {.incremental}
 
 <div style="font-size: 125%;">
 
-+ If sample size is large enough, the distribution of sample means is approximately Normal
++ **Theory**: Sample mean approaches Normality as $n$ increases
+  
++ **Practice**: If $n$ is large enough, the sampling distribution is approximately Normal
   + Mean: population mean
-  + SD: population SD / $\sqrt{n}$ (also called standard error of the mean)
+  + SD: population SD / $\sqrt{n}$ (often called *standard error of the mean*)
+  + "Large enough" depends on how skewed population is 
 
-+ What's big enough? 
-  + For many distributions, $n=30$ is sufficient, but for some distributions, a larger sample size may be required
++ **"One Sample" Reality**
+  + CLT allows us to treat that single sample as a draw from a known Normal distribution to make statements about the population
 
-+ We can use the theoretical properties of the sampling distribution to make statements about the population
+</div>
 
-</div> 
 :::
 
+::: {.notes}
+Allows us to engage in Statistical Inference. We take one sample, and we use the CLT to build a model of how that sample relates to the truth.
+:::
 ---
 
-## Motivating questions 
+## Application: protein consumption 
 
 <div style="font-size: 150%;">
 
@@ -1531,28 +1568,110 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 :::
 
+---
 
-## Application: how much protein do Americans eat, on average? 
+### How much protein do Americans eat, on average?
 
-::: {.incremental}
+<div style="font-size: 125%;">
 
+:::: {.columns}
 
-+ Data from the National Health and Nutrition Examination Survey in 2021-2023^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)]
+::: {.column width="50%"}
+**The sample** 
 
-+ There are `r nrow(protein_df23)` individuals whose protein intake was estimated from a dietary survey
-  + Mean: `r round(mean(protein_df23$protein_gm), 1)` grams per day
-  + SD: `r round(sd(protein_df23$protein_gm), 1)` grams per day
+*What we observe*
 
-+ These individuals are a sample from the population (all Americans) 
++ Data source: 2021-2023 NHANES study^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)] 
+($n$ = `r nrow(protein_df23)`)
 
-+ What is the distribution of the sample mean? 
-  + Mean = ?
-  + SD = ?
++ **Mean:** `r round(mean(protein_df23$protein_gm), 1)` g
++ **Standard Deviation:** `r round(sd(protein_df23$protein_gm), 1)` g
+:::
 
-+ We will use the CLT to estimate the average in the population, and provide a range of plausible values for that estimate (confidence intervals)
+::: {.column width="50%"}
 
 :::
- 
+
+::::
+</div>
+
+---
+
+### How much protein do Americans eat, on average?
+
+<div style="font-size: 125%;">
+
+:::: {.columns}
+
+::: {.column width="50%"}
+**The sample** 
+
+*What we observe* 
+
++ Data source: 2021-2023 NHANES study^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)] 
+($n$ = `r nrow(protein_df23)`)
+
++ **Mean:** `r round(mean(protein_df23$protein_gm), 1)` g
++ **Standard Deviation:** `r round(sd(protein_df23$protein_gm), 1)` g
+:::
+
+::: {.column width="50%"}
+**Sampling Distribution** 
+
+*What the CLT tells us*
+
++ **Shape** ? 
++ **Mean** ? 
++ **Standard Deviation**? 
+
+:::
+
+::::
+
+</div>
+
+---
+
+
+### How much protein do Americans eat, on average?
+
+<div style="font-size: 125%;">
+
+:::: {.columns}
+
+::: {.column width="50%"}
+**The sample** 
+
+*What we observe*
+
++ Data source: 2021-2023 NHANES study^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)] 
+($n$ = `r nrow(protein_df23)`)
+
++ **Mean:** `r round(mean(protein_df23$protein_gm), 1)` g
++ **Standard Deviation:** `r round(sd(protein_df23$protein_gm), 1)` g
+:::
+
+::: {.column width="50%"}
+
+**Sampling Distribution** 
+
+*What the CLT tells us*
+
++ **Shape**: Normal
++ **Mean**: population mean 
++ **Standard Deviation**: population SD / $\sqrt{n}$ 
+
+:::
+
+::::
+
+::: {.fragment}
+**Goal:** Use this Normal distribution to build a confidence interval for the population mean.
+:::
+
+</div> 
+
+
 
 ---
 
@@ -1598,6 +1717,12 @@ p1
 # If we think about all the sample means we could have gotten by sampling repeatedly, that forms a bell-shaped curve centered at `r round(sample_mean, 1)`, with standard deviation equal to the population standard deviation divided by the square root of the sample size
 ```
 
+::: {.notes}
+If we think about all the sample means we could have gotten by sampling repeatedly, that forms a bell-shaped curve pop mean with standard deviation equal to the population standard deviation divided by the square root of the sample size
+ 
+Since we have a large sample, we can use the sample SD to approximate the population SD
+
+::: 
 ---
 
 ### How much protein do Americans eat, on average?
@@ -1622,35 +1747,87 @@ p1 +
 # If we think about all the sample means we could have gotten by sampling repeatedly, that forms a bell-shaped curve centered at `r round(sample_mean, 1)`, with standard deviation equal to the population standard deviation divided by the square root of the sample size
 ```
 
+::: {.notes}
+Since Normal, we know exactly where 95% of the mass lies, that's our 95% CI 
+::: 
+
+---
+
+
+### Has average protein consumption changed?
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+**The samples** 
+
++ NHANES 2001^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001)] 
+  + Mean = `r round(mean(protein_df01$protein_gm), 1)` g
+  + SD = `r round(sd(protein_df01$protein_gm), 1)` g
+  + $n$ = `r nrow(protein_df01)`
+
++ NHANES 2023
+  + Mean = `r round(protein_mean, 1)` g
+  + SD = `r round(protein_sd, 1)` g
+  + $n$ = `r protein_n`
+
+::: 
+
+::: {.column width="50%"}
+
+::: 
+
+:::: 
+
 
 
 ---
 
-## Application: has protein consumption changed?
+### Has average protein consumption changed?
 
 
-::: {.incremental}
+:::: {.columns}
 
-<div style="font-size: 115%;">
+::: {.column width="50%"}
 
-+ Has protein intake among Americans has changed from 2001 to 2023?
-+ We have two samples from the population 
-  + NHANES data from 2001^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001)] (mean: `r round(mean(protein_df01$protein_gm), 1)`)
-  + NHANES data from 2023 (mean: `r round(protein_mean, 1)`)
-+ We know the sample means are approximately Normally distributed 
-  + Linear combination of Normally distributed variables are also Normal
-  + **Difference** in sample means is also Normally distributed 
-  + Mean: difference in population means 
-  + SD: square root of sum of variances in each sampling distribution 
-+ So we can use the CLT! 
+**The samples** 
 
-</div>
++ NHANES 2001^[[https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2001)] 
+  + Mean = `r round(mean(protein_df01$protein_gm), 1)` g
+  + SD = `r round(sd(protein_df01$protein_gm), 1)` g
+  + $n$ = `r nrow(protein_df01)`
+
++ NHANES 2023
+  + Mean = `r round(protein_mean, 1)` g
+  + SD = `r round(protein_sd, 1)` g
+  + $n$ = `r protein_n`
+
 ::: 
 
---- 
+::: {.column width="50%"}
+**Sampling Distribution**
+
++ Sample means are approximately Normally distributed (CLT)
++ Linear combination of Normally distributed variables are also Normal
++ **Difference** in sample means is also Normally distributed 
+  + Mean: difference in population means (`r round(protein_mean - mean(protein_df01$protein_gm), 1)`)
+  + SD: square root of sum of variances in each sampling distribution $\sqrt{\frac{44.4^2}{5266} + \frac{33.8^2}{4986}}$
+
+::: 
+
+:::: 
+
+::: {.fragment}
+**Goal:** Use this Normal distribution to see if there's a significant difference in population means 
+:::
 
 
-### Has protein consumption changed since 2001? 
+
+---
+
+### Has average protein consumption changed since 2001?
 
 
 ```{r diff1}
@@ -1689,7 +1866,7 @@ p1a
 
 ---
 
-### Has protein consumption changed since 2001? 
+### Has average protein consumption changed since 2001?
 
 ```{r diff2}
 #| cache: true 
@@ -1721,9 +1898,11 @@ pdiff
 
 ---
 
-### Has protein consumption changed since 2001? 
+### Has average protein consumption changed since 2001?
 
 ```{r diff3}
+#| cache: true 
+
 
 y_val1 = qnorm(.025, mean = difference, sd = sddiff)
 y_val2 = qnorm(.975, mean = difference, sd = sddiff)
@@ -1751,7 +1930,7 @@ pdiff +
 
 ---
 
-### Has protein consumption changed since 2001? 
+### Has average protein consumption changed since 2001?
 
 ::: {.incremental}
 
