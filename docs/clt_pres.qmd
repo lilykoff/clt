@@ -142,12 +142,14 @@ stocks = stocks %>%
 # write_csv(stocks, here::here("docs", "stocks.csv"))
 ```
 
+
+
 ## Learning objectives 
 <div style="font-size: 150%;">
 
 1. Understand the statement of the CLT
 2. Use the CLT to answer a public health question
-  
+
 </div>
   
 
@@ -169,13 +171,7 @@ stocks = stocks %>%
 
 :::
 
-
-
-# <span style="color:gray;">Central Limit</span> Theorem
-
-# <span style="color:gray;">Central</span> Limit <span style="color:gray;">Theorem</span>
-
-# Central <span style="color:gray;">Limit Theorem</span>
+# Central Limit Theorem
 
 
 ## Central Limit Theorem: Schematic 
@@ -224,6 +220,73 @@ dots_df = samples_df %>%
   ) %>% 
   unnest(cols = c(dots_x, dots_y))
 
+ggplot() +
+  # --- TOP LAYER: POPULATION ---
+  geom_polygon(data = df_pop, aes(x = x_scaled, y = y_scaled), 
+               fill = "black", alpha = 0.8) +
+  geom_text(aes(x = 2, y = 9), label = "Population\nDistribution", 
+            hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "black") +
+  geom_text(aes(x = 7, y = 8.5), 
+            label = "atop('Unknown distribution', 'with mean ' ~ mu ~ ', variance ' ~ sigma^2)", parse = TRUE,
+            hjust = 0, vjust = 0.5, size = 5, color = "grey40", fontface = "italic") +
+  
+  # --- MIDDLE LAYER: SAMPLES ---
+  geom_tile(data = samples_df %>% slice(1), aes(x = x_center, y = y_center, width = width, height = height),
+            fill = "#f6f5f3", color = "#E69F00", linewidth = 1.5) +
+  geom_point(data = dots_df %>% filter(id == "Sample 1"), aes(x = dots_x, y = dots_y), 
+             color = "#E69F00", size = 2, alpha = 0.7) +
+  geom_text(data = samples_df %>% slice(1), aes(x = x_center, y = y_center - 0.9), label = "Sample",
+            size = 5, fontface = "bold", color = "#E69F00") +
+  
+  # --- NEW: CALCULATE MEAN STEP ---
+  # 1. Labels
+  geom_text(data = means_df %>% slice(1), aes(x = x, y = y, label = label),
+            parse = TRUE, size = 8, color = "#D55E00", fontface = "bold") +
+  # 2. Arrows from Bucket -> Mean (LENGTHENED)
+  geom_segment(aes(x = 2.5, xend = 2.5, y = 3.8, yend = 3.6), # <--- STRETCHED DOWN (was 3.9)
+               arrow = arrow(length = unit(0.15, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = 5, xend = 5, y = 3.8, yend = 3.6),
+               arrow = arrow(length = unit(0.15, "cm")), color = "#D55E00", alpha = 0) +
+  geom_segment(aes(x = 7.5, xend = 7.5, y = 3.8, yend = 3.6, alpha = 0),
+               arrow = arrow(length = unit(0.15, "cm")), color = "#D55E00", alpha = 0) +
+  
+  # --- BOTTOM LAYER: SAMPLING DIST ---
+  geom_polygon(data = df_norm, aes(x = x_scaled, y = y_scaled), 
+               fill = "#CC79A7", alpha = 0) +
+  geom_text(aes(x = 2, y = 1.5), label = "Distribution of\nthe sample mean", 
+            hjust = 1, vjust = 0.5, fontface = "bold", size = 6, color = "#CC79A7", alpha= 0) +
+  geom_text(aes(x = 7.2, y = 1.5), label = "atop('Normal distribution', 'with mean ' ~ mu ~ ', variance ' ~ frac(sigma^2, n))", parse = TRUE, alpha=0,
+            hjust = 0, vjust = 0.5, size = 5, color = "#CC79A7", fontface = "italic") +
+  
+  # --- ARROWS ---
+  # Top Arrows: Pop -> Samples (Unchanged)
+  geom_curve(aes(x = 5, y = 7.5, xend = 2.5, yend = 5.7), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60") +
+  geom_curve(aes(x = 5, y = 7.5, xend = 5, yend = 5.7), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60",alpha= 0) +
+  geom_curve(aes(x = 5, y = 7.5, xend = 7.5, yend = 5.7), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60",alpha=0) +
+  
+  # Bottom Arrows: MEANS -> Sampling Dist (ADJUSTED START POINT)
+  # Origin is now y = 2.9 (below the new mean label position)
+  geom_curve(aes(x = 2.7, y = 2.8, xend = 4.9, yend = 2.6), # <--- MOVED DOWN from 3.3
+             arrow = arrow(length = unit(0.3, "cm")), curvature = -0.2, color = "grey60",alpha=0) +
+  geom_curve(aes(x = 5, y = 2.9, xend = 5, yend = 2.6), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0, color = "grey60",alpha=0) +
+  geom_curve(aes(x = 7.5, y = 2.9, xend = 5.1, yend = 2.6), 
+             arrow = arrow(length = unit(0.3, "cm")), curvature = 0.2, color = "grey60",alpha=0) +
+  
+  # --- THEME ---
+  xlim(0, 10) + ylim(0, 10) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#f6f5f3", color = NA))
+```
+
+---
+
+## Central Limit Theorem: Schematic 
+
+```{r clt schem2}
 # 2. PLOT
 clt_plot = ggplot() +
   # --- TOP LAYER: POPULATION ---
@@ -290,6 +353,8 @@ clt_plot = ggplot() +
 clt_plot
 ```
 
+
+
 ::: {.notes}
 Roadmap 
 Population: messy and unkonwn
@@ -307,7 +372,7 @@ This is important because we ONLY see the sample mean, and we want to quantify t
 
 
 
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
 $$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
 
 <br>
@@ -320,7 +385,7 @@ Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
 
 ## Central Limit Theorem 
 
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
 $$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
 
 <br>
@@ -340,7 +405,7 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 ## Central Limit Theorem 
 
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
 $$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
 
 <br>
@@ -353,42 +418,7 @@ As the sample size $n$ approaches infinity, the distribution of the sample mean 
 
 $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
-
-## The Normal Distribution
-
-
-```{r normal dist}
-#| cache: true 
-
-
-p_normal = 
-  ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
-  geom_area(stat = "function", fun = dnorm, args = list(mean = 0, sd = 1), 
-            xlim = c(-3.2, 3.2), fill = "#56B4E9", alpha = 0.5) +
-  stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1) +
-  # theme(axis.text.y = element_blank())+
-  labs(y = "Density f(x)", x = "Data (x)", title = "Normal distribution with mean 0, variance 1") +
-  scale_x_continuous(breaks = seq(-3, 3, 1))
-
-p_normal +
-  annotate(geom = "curve",
-           x = 2, xend = .8, y = 0.3, yend = 0.2,
-           curvature= -0.2,
-           arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
-  annotate(geom = "label",
-           x = 2, y = 0.3, size = 5,
-           label = "Area under curve = 1") +
-  annotate(geom = "label", 
-           x = -2.2, y = 0.3, 
-           label = "'f(x)' == frac(1, sqrt(2 * pi)) * e^{-frac(x^2, 2)}", 
-           parse = TRUE, 
-           size = 5, 
-           color = "black")
-```
-
-
 ---
-
 
 ### Height: naturally Normal 
 
@@ -435,6 +465,43 @@ sat_score %>%
 
 
 ---
+
+## The Normal Distribution
+
+
+```{r normal dist}
+#| cache: true 
+
+
+p_normal = 
+  ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
+  geom_area(stat = "function", fun = dnorm, args = list(mean = 0, sd = 1), 
+            xlim = c(-3.2, 3.2), fill = "#56B4E9", alpha = 0.5) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1), linewidth = 1.1) +
+  # theme(axis.text.y = element_blank())+
+  labs(y = "Density f(x)", x = "Data (x)", title = "Normal distribution with mean 0, variance 1 (Standard Normal)") +
+  scale_x_continuous(breaks = seq(-3, 3, 1))
+
+p_normal +
+  annotate(geom = "curve",
+           x = 2, xend = .8, y = 0.3, yend = 0.2,
+           curvature= -0.2,
+           arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
+  annotate(geom = "label",
+           x = 2, y = 0.3, size = 5,
+           label = "Area under curve = 1") +
+  annotate(geom = "label", 
+           x = -2.2, y = 0.3, 
+           label = "'f(x)' == frac(1, sqrt(2 * pi * sigma^2)) * e^{-frac((x-mu)^2, 2 * sigma^2)}", 
+           parse = TRUE, 
+           size = 7, 
+           color = "black")
+```
+
+
+---
+
+
 
 
 
@@ -487,7 +554,7 @@ p_sds
 
 ---
 
-### 68-95-99.7 Rule
+### Probability as area
 
 ```{r normal again mean}
 #| cache: true 
@@ -496,8 +563,8 @@ ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
   labs(y = "Density", x = "Data (x)") +
   stat_function(fun = dnorm, n = 201, args = list(mean = 0, sd = 1),
                 linewidth = 1.1) +
-  scale_x_continuous(breaks = seq(-3, 3, 1)) +
-  geom_vline(aes(xintercept = 0), linetype = "dashed") 
+  scale_x_continuous(breaks = seq(-3, 3, 1)) 
+  # geom_vline(aes(xintercept = 0), linetype = "dashed") 
   # annotate(geom = "label", x = 0, y = 0.35, label = "Mean = 0", size = 8) 
   
 
@@ -507,7 +574,7 @@ ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
 
 ---
 
-### 68-95-99.7 Rule
+### Probability as area
 
 ```{r normal1}
 #| cache: true 
@@ -550,7 +617,7 @@ pn_1 = ggplot(data = tibble(x = c(-3.2, 3.2)), aes(x)) +
 
 pn_1 +
   annotate(geom = "label", 
-           label = TeX("$P(-1 \\leq x \\leq 1) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-1}^{1} e^{-\\frac{1}{2}x^2} dx$"),
+           label = TeX("$P(-1 \\leq x \\leq 1) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-1}^{1} e^{-\\frac{1}{2}x^2} dx \\approx 0.68$"),
            parse = TRUE,
            x = 0, y = 0.1,
            size = 4,
@@ -559,7 +626,7 @@ pn_1 +
 
 ---
 
-### 68-95-99.7 Rule
+### Probability as area
 
 ```{r normal2}
 #| cache: true 
@@ -585,7 +652,7 @@ pn_2 =
 
 pn_2 +
   annotate(geom = "label", 
-           label = TeX("$P(-2 \\leq x \\leq 2) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-2}^{2} e^{-\\frac{1}{2}x^2} dx$"),
+           label = TeX("$P(-2 \\leq x \\leq 2) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-2}^{2} e^{-\\frac{1}{2}x^2} dx \\approx 0.95$"),
            parse = TRUE,
            x = 0, y = 0.1,
            size = 4,
@@ -595,7 +662,7 @@ pn_2 +
 ---
 
 
-### 68-95-99.7 Rule
+### Probability as area
 
 ```{r normal 3}
 #| cache: true 
@@ -622,7 +689,7 @@ pn_3 = pn_2 +
 
 pn_3 +
   annotate(geom = "label", 
-           label = TeX("$P(-3 \\leq x \\leq 3) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-3}^{3} e^{-\\frac{1}{2}x^2} dx$"),
+           label = TeX("$P(-3 \\leq x \\leq 3) = \\frac{1}{\\sqrt{2\\pi}} \\int_{-3}^{3} e^{-\\frac{1}{2}x^2} dx \\approx 0.997$"),
            parse = TRUE,
            x = 0, y = 0.04,
            size = 4,
@@ -637,11 +704,11 @@ pn_3 +
 
 <div style="font-size: 150%;">
 
-+ **Simplicity:** Symmetric and fully described by just two parameters ($\mu, \sigma$)
++ **Simple:** Symmetric and fully described by just two parameters ($\mu, \sigma$)
 
-+ **Universality:** Any Normal variable can be mapped to the Standard Normal: $$\mathrm{if} \quad X \sim N(\mu, \sigma^2) \quad \mathrm{ then } \quad \frac{X - \mu}{\sigma} \sim N(0,1)$$
++ **Universal:** Any Normal variable can be mapped to the Standard Normal: $$\mathrm{if} \quad X \sim N(\mu, \sigma^2) \quad \mathrm{ then } \quad \frac{X - \mu}{\sigma} \sim N(0,1)$$
 
-+ **Calculable** We can easily calculate probabilities (areas under the curve) for any range of values
++ **Calculable:** We can easily calculate probabilities (areas under the curve) for any range of values
 </div>
 :::
 
@@ -778,7 +845,7 @@ sat2 + annotate(geom = "label", x = 1400, y = 100000,
 
 ## Central Limit Theorem 
 
-<span style="color:red;">Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+<span style="color:red;">Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
 $$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
 </span>
 <br>
@@ -966,7 +1033,7 @@ plot_grid(dots, samp_protein, align = "v", rel_widths = c(1,1), ncol = 2)
 
 ## Central Limit Theorem 
 
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
 $$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
 
 <br>
@@ -1469,7 +1536,7 @@ Other helpful interactive demonstrations: [Stats calculators](https://www.statsc
 
 ## Central Limit Theorem 
 
-Let $X_1, X_2, \dots, X_n$ be a sequence of **independent and identically distributed (i.i.d)** random variables with:
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
 $$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
 
 <br>
@@ -1495,7 +1562,7 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 + Works even for really weirdly shaped population distributions 
 
-+ Requires minimal assumptions (which we'll discuss later)
++ Requires minimal assumptions
 
 + Intuition: extreme values are rare
 
@@ -1505,21 +1572,34 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 ---
 
-## A historical interlude 
+## Historical interlude 
 
-::: {.incremental}
+```{r}
+#| cache: true 
 
-<div style="font-size: 115%;">
+set.seed(345)
+coin_flips = tibble(
+  flips = 1:10000) %>% 
+  rowwise() %>% 
+  mutate(
+    heads = sum(rbinom(30, size = 1, prob = 0.5))
+)
+coin_flips %>% 
+  ggplot(aes(x= heads)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "#56B4E9")+ 
+  labs(x = "# of heads", y = "Count", title = "Number of heads in 30 flips of a coin")
+```
 
-+ **1733**: Abraham de Moivre realizes that if you flip a coin enough times, the distribution of the number of heads looks like a Normal distribution^[[https://www.jstor.org/stable/2334818?seq=1#page_scan_tab_contents](https://www.jstor.org/stable/2334818?seq=1#page_scan_tab_contents)]
+::: {.notes}
 
-+ **1812**: Pierre-Simon Laplace resurrects the idea, showing that you can approximate the Binomial distribution with a Normal distribution^[[https://archive.org/details/theorieanaldepro00laplrich](https://archive.org/details/theorieanaldepro00laplrich)]
++ **1733**: Abraham de Moivre realizes that if you flip a coin enough times, the distribution of the number of heads looks like a Normal distribution
 
-+ **1901**: Aleksandr Lyapunov provides the first rigorous proof of the CLT^[[https://www.tandfonline.com/doi/abs/10.1080/00207179208934258](https://www.tandfonline.com/doi/abs/10.1080/00207179208934258)] 
++ **1812**: Pierre-Simon Laplace resurrects the idea, showing that you can approximate the Binomial distribution with a Normal distribution
 
-+ **1920s**: George Pólya first uses the term *Central Limit Theorem*^[[https://gdz.sub.uni-goettingen.de/id/PPN266833020_0008](https://gdz.sub.uni-goettingen.de/id/PPN266833020_0008)]
++ **1901**: Aleksandr Lyapunov provides the first rigorous proof of the CLT
 
-</div>
++ **1920s**: George Pólya first uses the term *Central Limit Theorem*
+
 :::
 
 ---
@@ -1702,8 +1782,15 @@ p1 = ggplot(grid, aes(x=x)) +
            label=glue::glue("Mean = {round(protein_mean,1)} g"), size=5) +
   annotate(geom = "label",
            x = protein_mean,
-           y = 0.25,
-           label = glue::glue("SD = {round(protein_sd, 1)} / sqrt({protein_n}) = {round(protein_se, 2)} g"), size = 5,
+           y = 0.2,
+  label = expression(
+    atop(
+      SD == 33.8 / sqrt(4986),
+      paste("= ", 0.48, " g")
+    )
+  ), size = 5,
+ # parse = TRUE, size = 5,
+           # label = glue::glue("SD = {round(protein_sd, 1)} / sqrt({protein_n}) = {round(protein_se, 2)} g"), size = 5,
            hjust = 0) +
   annotate(geom = "segment", 
            x = 75, xend = protein_mean, y = 0.3, yend = 0.3,
