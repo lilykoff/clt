@@ -946,8 +946,8 @@ p_inference =
   annotate(geom = "segment", x = ci_upper, xend = ci_upper, y = -0.001, yend = 0.001,
            color = "#CC79A7", linewidth = 1.2) +
   labs(y = "", x = "Caffeine (mg)") +
-  annotate(geom = "text", x = sample_val, y = 0.002, label = "Lily's Sample Mean", color = "#CC79A7", vjust = 0) +
-  annotate(geom = "text", x = pop_mean, y = 0.002, label = "True Population Mean", color = "#E69F00", vjust = 0) +
+  annotate(geom = "text", x = sample_val, y = 0.001, label = "Lily's Sample Mean", color = "#CC79A7", vjust = 0) +
+  annotate(geom = "text", x = pop_mean, y = 0.002, label = "Population Mean", color = "#E69F00", vjust = 0) +
   theme_void() +
   theme(plot.title = element_text(face = "bold", size = 18),
         plot.subtitle = element_text(size = 14, color = "#444444"))
