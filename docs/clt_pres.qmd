@@ -155,17 +155,6 @@ stocks = stocks %>%
 ```
 
 
-
-## Learning objectives 
-<div style="font-size: 150%;">
-
-1. Understand the statement of the CLT
-2. Use the CLT to answer a public health question
-
-</div>
-  
----
-
 # Question: what is the average daily caffeine consumption among Americans? 
 
 # How might we answer this question? 
@@ -860,18 +849,18 @@ se = sqrt(pop_var / 100)
 x_min = pop_mean - 3.2 * se; x_max = pop_mean + 3.2 * se
 pnormal2 = 
   pnormal +
-  geom_labelvline(aes(xintercept = pop_mean), color = "#E69F00", 
-                  label = glue::glue("Mean = pop. mean = {round(pop_mean, 0)} mg")) + 
   annotate(geom = "segment",          color = "#444444",
-           x = pop_mean + se / 2, xend = pop_mean, y = 0.01, yend = 0.01,
+           x = pop_mean + se / 2, xend = pop_mean, y = 0.0025, yend = 0.0025,
           arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
   annotate(geom = "segment",          color = "#444444",
-           x = pop_mean + se / 2, xend = pop_mean + se, y = 0.01, yend = 0.01,
+           x = pop_mean + se / 2, xend = pop_mean + se, y = 0.0025, yend = 0.0025,
            arrow = arrow(length = unit(0.1, "inches"), type = "closed")) +
+  geom_labelvline(aes(xintercept = pop_mean), color = "#E69F00", 
+                  label = glue::glue("Mean = pop. mean = {round(pop_mean, 0)} mg")) + 
   annotate(geom = "label",
          x = pop_mean + se / 2,
          color = "#444444",
-         y = 0.007,
+         y = 0.005,
          # Use expression() to wrap the math logic
          label = expression(atop(
            # Top line: Formula
@@ -892,7 +881,6 @@ pnormal2
 
 
 ```{r}
-#| cache: true 
 
 yval1 = dnorm(vals[1], mean = pop_mean, sd = se)
 yval2 = dnorm(vals[2], mean = pop_mean, sd = se)
