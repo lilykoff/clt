@@ -1527,29 +1527,6 @@ normalCurve_stock = {
 Other helpful interactive demonstrations: [Stats calculators](https://www.statscalculators.com/resources/simulations/central-limit-theorem), [Seeing theory](https://seeing-theory.brown.edu/probability-distributions/index.html)
 
 
----
-
-
-
-
-
-
-## Central Limit Theorem 
-
-Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
-$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
-
-<br>
-
-Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
-
-
-<br>
-
-As the sample size $n$ approaches infinity, the distribution of the sample mean converges to a Normal distribution:
-
-$$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
-
 
 ---
 
@@ -1573,6 +1550,8 @@ $$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 ---
 
 ## Historical interlude 
+
+De Moivre and (later) Laplace connect outcomes of coin flips and the Normal distribution 
 
 ```{r}
 #| cache: true 
@@ -1603,6 +1582,24 @@ coin_flips %>%
 :::
 
 ---
+
+### Historical interlude 
+
+**Quincunx Machine (Galton Board)**
+
+<center>
+<video width="800" height="600" controls loop autoplay muted>
+  <source src="galton.mov" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+</center>
+
+Play more with the simulation [here](https://www.mathsisfun.com/data/quincunx.html)
+
+::: {.notes}
+Each peg is a decision point (Left/Right).
+The final pile is the sum of those decisions.
+:::
 
 
 
