@@ -36,6 +36,7 @@ editor_options:
 #| include: false 
 library(tidyverse)
 library(showtext)
+library(ggimage)
 library(ggplot2)
 library(usmap)
 library(emoGG)
@@ -195,7 +196,10 @@ s1 %>%
     quarto.use_bootstrap = TRUE
   ) %>% 
   cols_align("left",
-             columns = everything())
+             columns = everything()) %>% 
+  cols_label("id" = "Participant ID",
+             "age" = "Age (years)",
+             "caffeine_mg" = "Caffeine intake (mg)")
 ```
 
 
@@ -214,6 +218,7 @@ s1 %>%
   bind_rows(s2) %>% 
   mutate(cumulative_sample_mean = cummean(caffeine_mg)) %>% 
   gt() %>% 
+  fmt_number(columns = cumulative_sample_mean, decimals = 0) %>%
   tab_options(
     table.font.size = px(40),
     heading.title.font.size = px(50),
@@ -222,7 +227,11 @@ s1 %>%
     table.width = pct(100)
   ) %>% 
   cols_align("left",
-             columns = everything())
+             columns = everything()) %>% 
+  cols_label("id" = "Participant ID",
+             "age" = "Age (years)",
+             "caffeine_mg" = "Caffeine intake (mg)",
+             "cumulative_sample_mean" = "Sample mean (cumulative)")
 ```
 
 
@@ -242,6 +251,7 @@ s1 %>%
   mutate(cumulative_sample_mean = cummean(caffeine_mg)) %>% 
   slice(1:10) %>% 
   gt() %>% 
+  fmt_number(columns = cumulative_sample_mean, decimals = 0) %>%
   tab_options(
     table.font.size = px(40),
     heading.title.font.size = px(50),
@@ -250,7 +260,11 @@ s1 %>%
     table.width = pct(100)
   ) %>% 
   cols_align("left",
-             columns = everything())
+             columns = everything()) %>% 
+  cols_label("id" = "Participant ID",
+             "age" = "Age (years)",
+             "caffeine_mg" = "Caffeine intake (mg)",
+             "cumulative_sample_mean" = "Sample mean (cumulative)")
 ```
 
 ---
@@ -270,7 +284,7 @@ samp_df %>%
   ggplot(aes(x = n, y = cumulative_sample_mean)) +
   geom_point(size = 2) +
   geom_line() +
-  scale_y_continuous(limits = c(0, 130)) +
+  scale_y_continuous(limits = c(0, 225)) +
   labs(x = "Number of people in sample", y = "Sample mean caffeine (mg)", title = "n = 30")
 
 
@@ -300,10 +314,69 @@ samp_df2 %>%
   ggplot(aes(x = n, y = cumulative_sample_mean)) +
   geom_point(size = 2) +
   geom_line() +
-  scale_y_continuous(limits = c(0, 130)) +
+  scale_y_continuous(limits=c(0,225), breaks = seq(0,225,25)) +
   labs(x = "Number of people in sample", y = "Sample mean caffeine (mg)",
        title = "n = 100")
 
+```
+
+
+---
+
+```{r}
+#| cache: true 
+
+# 1. SETUP DATA
+# Replace these URLs with your local file paths! 
+# e.g., image = c("figs/espresso.jpg", "figs/soda.jpg", ...)
+caffeine_data = tibble(
+  beverage = c("Monster Java\n300 mg", "Coca Cola\n35 mg", "16oz Coffee\n315 mg", "16oz Latte\n150 mg", "16oz Matcha\n65 mg", "Kombucha\n68 mg", "Herbal Tea\n0 mg"),
+  caffeine_mg = c(300, 35, 315, 150, 65, 68, 0),
+  # Using reliable placeholder icons for the demo
+  image = c(here::here("docs/figs/monster.jpeg"),
+            here::here("docs/figs/coke.jpeg"),
+            here::here("docs/figs/grande.jpeg"),
+            here::here("docs/figs/latte.jpeg"),
+            here::here("docs/figs/matcha.jpeg"),
+            here::here("docs/figs/kombucha.png"),
+            here::here("docs/figs/herbal.jpeg"))
+)
+
+# 2. PREP: Reorder the beverage factor by caffeine amount
+plot_data = caffeine_data %>% 
+  mutate(beverage = fct_reorder(beverage, caffeine_mg))
+
+# 3. PLOT
+ggplot(plot_data, aes(x = beverage, y = caffeine_mg)) +
+  
+  # A. The "Stick" (Lollipop stem)
+  geom_segment(aes(xend = beverage, yend = 0), 
+               color = "#C4A484", # A nice 'coffee' brown
+               linewidth = 1.2, 
+               linetype = "dotted") +
+  
+  # B. The Image (The "Pop")
+  geom_image(aes(image = image), size = 0.25) + # Adjust size (0.05 to 0.15 usually good)
+  
+  # C. The Text Label (Caffeine amount below or above)
+  # geom_text(aes(y = 0, label = paste0(caffeine_mg, " mg")),
+  #           vjust = 0, # Push text up above the image
+  #           color = "#444444",
+  #           # fontface = "bold",
+  #           size = 5) +
+  scale_y_continuous(limits = c(0, 400), expand = c(0,0)) + # Give room for the labels
+  labs(title = "Caffeine Content by Beverage",
+       y = "Caffeine (mg)", 
+       x = "") +
+  # theme_minimal(base_family = "Source Sans Pro") +
+  theme(
+    panel.grid.major.x = element_blank(), # Remove vertical grid lines
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(size = 14, face = "bold", color = "#444444"),
+    axis.text.y = element_blank(), # Hide Y axis numbers (since we have labels)
+    axis.title.y = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = "#6F4E37")
+  )
 ```
 
 # What if someone else went out and sampled different people? 
@@ -326,6 +399,7 @@ samp_df_new =
 samp_df_new %>%
   ggplot(aes(x = n, y = cumulative_sample_mean)) +
   geom_point(size = 2) +
+  scale_y_continuous(limits=c(0,225), breaks = seq(0,225,25)) +
   geom_line() +
   labs(x = "Number of people in sample", y = "Sample mean caffeine (mg)",
        title = "n = 100")
@@ -350,6 +424,7 @@ samp_df_again =
 samp_df_again %>%
   ggplot(aes(x = n, y = cumulative_sample_mean)) +
   geom_point(size = 2) +
+  scale_y_continuous(limits=c(0,225), breaks = seq(0,225,25)) +
   geom_line() +
   labs(x = "Number of people in sample", y = "Sample mean caffeine (mg)",
        title = "n = 100")
@@ -423,6 +498,7 @@ samps_df %>%
  
 
 ```
+
 
 # What will happen if 500 different people take samples? 
 
@@ -528,7 +604,7 @@ p1 +
 
 ---
 
-### Distribtion of sample means at  n = 100
+### Distribution of sample means at  n = 100
 
 ```{r}
 
@@ -553,7 +629,7 @@ generated_df_big %>% filter(n==100) %>%
 
 ---
 
-### Distribtion of sample means at  n = 100
+### Distribution of sample means at  n = 100
 
 ```{r}
 #| cache: true 
@@ -580,9 +656,19 @@ hist_plot
 
 # What does the distribution of sample means look like at n = 50? 
 
+```{r}
+
+p1 +
+  geom_labelhline(aes(yintercept = mean(caffeine_df$caffeine_mg)), color = "#E69F00", 
+                  label = glue::glue("Population mean = {round(mean(caffeine_df$caffeine_mg), 0)} mg")) +
+  geom_point(data = generated_df_big %>% filter(n==50),
+             aes(x = n, y = cumulative_sample_mean),
+             color = "#D55E00", alpha = 0.5) 
+```
+
 ---
 
-### Distribtion of sample means at  n = 50
+### Distribution of sample means at  n = 50
 
 
 ```{r}
@@ -605,7 +691,7 @@ generated_df_big %>% filter(n==50) %>%
 
 ---
 
-### Distribtion of sample means at  n = 50
+### Distribution of sample means at  n = 50
 
 ```{r}
 #| cache: true
@@ -637,8 +723,8 @@ hist_plot
 data = FileAttachment("caffeine_df.csv").csv({ typed: true })
 
 viewof sample_size = Inputs.range(
-  [2, 200], 
-  {value: 50, step: 1, label: "Sample size:"}
+  [2, 120], 
+  {value: 2, step: 1, label: "Sample size:"}
 )
 
 
@@ -795,10 +881,16 @@ normalCurve = {
 ::: {.incremental}
 <div style="font-size: 130%;">
 
-+ **Reality:**
++ We waned to use a sample to learn about a population
++ So far, we've been taking a lot of different samples of size $n$
++ We saw that the mean of those samples were Normal, as long as $n$ is big enough 
++ **But in reality**
   + We only get **one** sample and sample mean ($\bar{X}_n$)
   + We *never* know the true population mean $(\mu)$
-+ **CLT**: tells us how the single sample mean relates to the unknown truth
+  + How far away is our sample mean from the truth?
+  
++ **Central Limit Theorem**: answers this question 
+  + As the sample size $n$ increases, the distribution of the sample mean $\bar{X}_n$ approaches a Normal distribution with mean $\mu$ and variance $\frac{\sigma^2}{n}$
 
 
 </div>
@@ -873,7 +965,7 @@ pnormal2
 
 
 
-# The means of our earlier samples were just draws from this Normal distribution 
+# The means of our earlier samples were draws from this Normal distribution 
 
 ---
 
@@ -905,7 +997,7 @@ pnormal2 +
 
 ---
 
-### Using the CLT to quantify uncertainty: confidence intervals 
+### Using the CLT for inference: confidence intervals 
 
 ```{r}
 #| cache: true
@@ -942,3 +1034,398 @@ p_inference =
 
 p_inference
 ```
+
+# Appendix
+
+---
+
+### Distribution of sample mean: hours worked 
+
+```{ojs}
+data2 = FileAttachment("work_df.csv").csv({ typed: true })
+
+viewof sample_size2 = Inputs.range(
+  [2, 100], 
+  {value: 2, step: 1, label: "Sample size:"}
+)
+
+sample_means2 = {
+  // Dependency tracking: re-run when these change
+  sample_size2;
+  
+  // Safety check: ensure data is loaded
+  if (!data2 || data2.length === 0) return [];
+  
+  // Safety check: ensure column exists (Case Sensitive!)
+  if (typeof data2[0].hrs_worked === "undefined") {
+    return ["Error: Column 'hrs_worked' not found in data"];
+  }
+
+  const means = [];
+  // Create a local copy of the array to shuffle
+  // We do this inside the loop or use a specific shuffler to ensure 
+  // we are sampling from the full population every time.
+  const popArray = Array.from(data2); 
+
+  for (let i = 0; i < 500; i++) {
+    // 1. Shuffle a clean copy of the population
+    // 2. Slice the first n elements (Sampling WITHOUT replacement)
+    const sample = d3.shuffle([...popArray]).slice(0, sample_size2);
+
+    // 3. Compute mean
+    const m = d3.mean(sample, d => d.hrs_worked);
+    means.push(m);
+  }
+
+  return means;
+}
+
+
+// 5. CALCULATE NORMAL CURVE (THEORETICAL)
+// We now generate the curve based on the Population Parameters, not the sample.
+// This shows the Theoretical prediction of the CLT.
+normalCurve2 = {
+  if (sample_means2.length < 2 || !data2) return [];
+  
+  // 1. Get Population Statistics
+  const popMean = d3.mean(data2, d => d.hrs_worked);
+  const popSD = d3.deviation(data2, d => d.hrs_worked);
+  
+  // 2. Calculate Standard Error (The predicted width of the sampling distribution)
+  // Formula: Population SD / sqrt(n)
+  const se = popSD / Math.sqrt(sample_size2);
+
+  // 3. Determine range for the curve (centered on popMean)
+  const minX = popMean - (4 * se);
+  const maxX = popMean + (4 * se);
+  
+  // Create a smooth grid of X values
+  const grid = d3.range(minX, maxX, (maxX - minX) / 200);
+  
+  // Normal Density Function using Population Mean and Standard Error
+  const pdf = (x) => (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - popMean) / se, 2));
+  
+  return grid.map(x => ({x: x, y: pdf(x)}));
+}
+
+// 6. PLOT
+// 6. SIDE-BY-SIDE PLOTS WITH EXTERNAL LEGEND
+{
+  // --- A. SETUP VARIABLES ---
+  const popMean = d3.mean(data2, d => d.hrs_worked);
+  const n = sample_means2.length;
+  const bins = d3.bin().thresholds(20)(sample_means2);
+  
+  // NEW: Calculate fixed x-axis limits based on the Population Data
+  // This ensures the axis stays constant regardless of sample size
+  const xLimits = d3.extent(data2, d => d.hrs_worked);
+
+  // Define colors
+  const colorDomain = ["Sampling Distribution Mean", "Population Mean", "Normal Curve"];
+  const colorRange = ["black", "#E69F00", "#D55E00"];
+
+  // --- B. POPULATION PLOT (Left) ---
+  const popPlot = Plot.plot({
+    width: 550,
+    height: 500,
+    caption: "Population Distribution (Raw Data)",
+    marginTop: 40,
+    marginLeft: 50,
+    marginBottom: 40,
+    style: { fontSize: "14px", overflow: "visible" },
+    
+    marks: [
+      Plot.rectY(data2, Plot.binX({y: "count"}, {x: "hrs_worked", fill: "#444444", fillOpacity: 0.5})),
+    ],
+    // We explicitly set the domain here too, just to be safe and consistent
+    x: { label: "Hours worked", domain: xLimits }, 
+    y: { label: "Count" }
+  });
+
+  // --- C. SAMPLING DISTRIBUTION PLOT (Right) ---
+  const sampPlot = Plot.plot({
+    width: 550,
+    height: 500,
+    caption: `Sampling Distribution (n=${sample_size2})`,
+    marginTop: 40,
+    marginLeft: 50,
+    marginBottom: 40,
+    style: { fontSize: "14px", overflow: "visible" },
+    
+    color: {
+      domain: colorDomain,
+      range: colorRange,
+      legend: false
+    },
+    marks: [
+      Plot.rectY(bins, {
+        x1: "x0", x2: "x1", 
+        y: d => d.length / (n * (d.x1 - d.x0)), 
+        fill: "#444444", fillOpacity: 0.3, tip: true,
+        title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
+      }),
+      Plot.line(normalCurve2, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
+      Plot.ruleX([d3.mean(sample_means2)], {stroke: () => "Sampling Distribution Mean", strokeWidth: 3}),
+      Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
+    ],
+    // NEW: Apply the fixed population domain here
+    x: { label: "Sample Mean", tickFormat: ".1f", domain: xLimits }, 
+    y: { label: "Density" }
+  });
+
+  // --- D. LEGEND & LAYOUT ---
+  const myLegend = Plot.legend({
+    color: { domain: colorDomain, range: colorRange },
+    style: { marginBottom: "10px", fontSize: "14px" }
+  });
+
+  return html`
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 100%; max-width: 920px; display: flex; justify-content: flex-end;">
+      ${myLegend}
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+      <div>${popPlot}</div>
+      <div>${sampPlot}</div>
+    </div>
+  </div>`;
+}
+```
+
+
+
+---
+
+
+### Distribution of the sample mean: S&P 500 Volume 
+
+```{ojs}
+stock = FileAttachment("stocks.csv").csv({ typed: true })
+
+viewof sample_size_st = Inputs.range(
+  [2, 100], 
+  {value: 2, step: 1, label: "Sample size:"}
+)
+
+
+
+sample_means_stock = {
+  // Dependency tracking: re-run when these change
+  sample_size_st;
+  
+  // Safety check: ensure stock is loaded
+  if (!stock || stock.length === 0) return [];
+  
+  // Safety check: ensure column exists (Case Sensitive!)
+  if (typeof stock[0].sp500_volume === "undefined") {
+    return ["Error: Column 'sp500_volume' not found in stock"];
+  }
+
+  const means = [];
+  // Create a local copy of the array to shuffle
+  // We do this inside the loop or use a specific shuffler to ensure 
+  // we are sampling from the full population every time.
+  const popArray = Array.from(stock); 
+
+  for (let i = 0; i < 500; i++) {
+    // 1. Shuffle a clean copy of the population
+    // 2. Slice the first n elements (Sampling WITHOUT replacement)
+    const sample = d3.shuffle([...popArray]).slice(0, sample_size_st);
+
+    // 3. Compute mean
+    const m = d3.mean(sample, d => d.sp500_volume);
+    means.push(m);
+  }
+
+  return means;
+}
+
+
+// 5. CALCULATE NORMAL CURVE (THEORETICAL)
+// We now generate the curve based on the Population Parameters, not the sample.
+// This shows the Theoretical prediction of the CLT.
+normalCurve_stock = {
+  if (sample_means_stock.length < 2 || !stock) return [];
+  
+  // 1. Get Population Statistics
+  const popMean = d3.mean(stock, d => d.sp500_volume);
+  const popSD = d3.deviation(stock, d => d.sp500_volume);
+  
+  // 2. Calculate Standard Error (The predicted width of the sampling distribution)
+  // Formula: Population SD / sqrt(n)
+  const se = popSD / Math.sqrt(sample_size_st);
+
+  // 3. Determine range for the curve (centered on popMean)
+  const minX = popMean - (4 * se);
+  const maxX = popMean + (4 * se);
+  
+  // Create a smooth grid of X values
+  const grid = d3.range(minX, maxX, (maxX - minX) / 200);
+  
+  // Normal Density Function using Population Mean and Standard Error
+  const pdf = (x) => (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - popMean) / se, 2));
+  
+  return grid.map(x => ({x: x, y: pdf(x)}));
+}
+
+// 6. PLOT
+// 6. SIDE-BY-SIDE PLOTS WITH EXTERNAL LEGEND
+{
+  // --- A. SETUP VARIABLES ---
+  const popMean = d3.mean(stock, d => d.sp500_volume);
+  const n = sample_means_stock.length;
+  const bins = d3.bin().thresholds(20)(sample_means_stock);
+  
+  // NEW: Calculate fixed x-axis limits based on the Population stock
+  // This ensures the axis stays constant regardless of sample size
+  const xLimits = d3.extent(stock, d => d.sp500_volume);
+
+  // Define colors
+  const colorDomain = ["Sampling Distribution Mean", "Population Mean", "Normal Curve"];
+  const colorRange = ["black", "#E69F00", "#D55E00"];
+
+  // --- B. POPULATION PLOT (Left) ---
+  const popPlot = Plot.plot({
+    width: 550,
+    height: 500,
+    caption: "Population Distribution (Raw Data)",
+    marginTop: 40,
+    marginLeft: 50,
+    marginBottom: 40,
+    style: { fontSize: "14px", overflow: "visible" },
+    
+    marks: [
+      Plot.rectY(stock, Plot.binX({y: "count"}, {x: "sp500_volume", fill: "#444444", fillOpacity: 0.5})),
+    ],
+    // We explicitly set the domain here too, just to be safe and consistent
+    x: { label: "S&P 500 Volume (x10^6)", domain: xLimits }, 
+    y: { label: "Count" }
+  });
+
+  // --- C. SAMPLING DISTRIBUTION PLOT (Right) ---
+  const sampPlot = Plot.plot({
+    width: 550,
+    height: 500,
+    caption: `Sampling Distribution (n=${sample_size_st})`,
+    marginTop: 40,
+    marginLeft: 50,
+    marginBottom: 40,
+    style: { fontSize: "14px", overflow: "visible" },
+    
+    color: {
+      domain: colorDomain,
+      range: colorRange,
+      legend: false
+    },
+    marks: [
+      Plot.rectY(bins, {
+        x1: "x0", x2: "x1", 
+        y: d => d.length / (n * (d.x1 - d.x0)), 
+        fill: "#444444", fillOpacity: 0.3, tip: true,
+        title: d => `Count: ${d.length}\nDensity: ${(d.length / (n * (d.x1 - d.x0))).toFixed(3)}`
+      }),
+      Plot.line(normalCurve_stock, {x: "x", y: "y", stroke: () => "Normal Curve", strokeWidth: 3}),
+      Plot.ruleX([d3.mean(sample_means_stock)], {stroke: () => "Sampling Distribution Mean", strokeWidth: 3}),
+      Plot.ruleX([popMean], {stroke: () => "Population Mean", strokeDasharray: "4,4", strokeWidth: 2, opacity: 0.8})
+    ],
+    // NEW: Apply the fixed population domain here
+    x: { label: "Sample Mean", tickFormat: ".1f", domain: xLimits }, 
+    y: { label: "Density" }
+  });
+
+  // --- D. LEGEND & LAYOUT ---
+  const myLegend = Plot.legend({
+    color: { domain: colorDomain, range: colorRange },
+    style: { marginBottom: "10px", fontSize: "14px" }
+  });
+
+  return html`
+  <div style="display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 100%; max-width: 920px; display: flex; justify-content: flex-end;">
+      ${myLegend}
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+      <div>${popPlot}</div>
+      <div>${sampPlot}</div>
+    </div>
+  </div>`;
+}
+```
+
+Other helpful interactive demonstrations: [Stats calculators](https://www.statscalculators.com/resources/simulations/central-limit-theorem), [Seeing theory](https://seeing-theory.brown.edu/probability-distributions/index.html)
+
+
+
+
+---
+
+### History: coin flips 
+
+De Moivre and (later) Laplace connect outcomes of coin flips and the Normal distribution 
+
+```{r}
+#| cache: true 
+
+set.seed(345)
+coin_flips = tibble(
+  flips = 1:10000) %>% 
+  rowwise() %>% 
+  mutate(
+    heads = sum(rbinom(30, size = 1, prob = 0.5))
+)
+coin_flips %>% 
+  ggplot(aes(x= heads)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "#56B4E9")+ 
+  labs(x = "# of heads", y = "Count", title = "Number of heads in 30 flips of a coin")
+```
+
+::: {.notes}
+
++ **1733**: Abraham de Moivre realizes that if you flip a coin enough times, the distribution of the number of heads looks like a Normal distribution
+
++ **1812**: Pierre-Simon Laplace resurrects the idea, showing that you can approximate the Binomial distribution with a Normal distribution
+
++ **1901**: Aleksandr Lyapunov provides the first rigorous proof of the CLT
+
++ **1920s**: George Pólya first uses the term *Central Limit Theorem*
+
+:::
+
+---
+
+### History: Quincunx
+
+**Quincunx Machine (Galton Board)**
+
+<center>
+<video width="800" height="600" controls loop autoplay muted>
+  <source src="galton.mov" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+</center>
+
+Play more with the simulation [here](https://www.mathsisfun.com/data/quincunx.html)
+
+::: {.notes}
+Each peg is a decision point (Left/Right).
+The final pile is the sum of those decisions.
+:::
+
+---
+
+## What assumptions do we need for CLT? 
+
+
+
+<div style="font-size: 115%;">
+
++ **Independence**: the value of one observation must not influence the value of another
+  + Violation: siblings, household members, eyes
+  
++ **Identically distributed**: all observations come from the same underlying population 
+  + Violation: sample from U.S. and Europe 
+
++ **Finite mean and  variance**: the underlying population must have a defined mean and variance
+  + Violation: some theoretical distributions (e.g., Cauchy) where the CLT never applies; not common in real data
+  
+</div>
