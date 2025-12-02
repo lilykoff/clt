@@ -876,7 +876,7 @@ normalCurve = {
 
 ---
 
-## The Central Limit Theorem
+## Recap so far 
 
 ::: {.incremental}
 <div style="font-size: 130%;">
@@ -884,21 +884,34 @@ normalCurve = {
 + We waned to use a sample to learn about a population
 + So far, we've been taking a lot of different samples of size $n$
 + We saw that the mean of those samples were Normal, as long as $n$ is big enough 
-+ **But in reality**
++ **In reality**
   + We only get **one** sample and sample mean ($\bar{X}_n$)
   + We *never* know the true population mean $(\mu)$
   + How far away is our sample mean from the truth?
-  
+
+</div> 
+::: 
+
+---
+
+## Central Limit Theorem
+
+<div style="font-size: 130%;">
+
+::: {.incremental}
+
 + **Central Limit Theorem**: answers this question 
-  + As the sample size $n$ increases, the distribution of the sample mean $\bar{X}_n$ approaches a Normal distribution with mean $\mu$ and variance $\frac{\sigma^2}{n}$
+
++ As the sample size $n$ increases, the distribution of the sample mean $\bar{X}_n$ approaches a Normal distribution with mean $\mu$ and variance $\frac{\sigma^2}{n}$
 
 
-</div>
 :::
 
 ::: {.fragment}
 $$\bar{X}_n  \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 :::
+
+</div>
 
 ---
 
@@ -1011,10 +1024,10 @@ ci_upper = sample_val + 1.96 * se
 p_inference = 
   ggplot(data = tibble(x = seq(x_min, x_max, 0.01)), aes(x)) +
   # Faint "Truth" distribution
-  stat_function(fun = dnorm, n = 101, args = list(mean = pop_mean, sd = se), 
-                color = "darkgrey", linetype = "dashed") +
+  stat_function(fun = dnorm, n = 101, args = list(mean = pop_mean, sd = se),
+  color = "darkgrey", linetype = "dashed", alpha = 0) +
   # The Truth Line (Faint)
-  geom_vline(aes(xintercept = pop_mean), color = "#E69F00", linetype = "dotted", alpha = 0.75) +
+  geom_vline(aes(xintercept = pop_mean), color = "#E69F00", linetype = "dotted", alpha = 0) +
   # The Sample Dot
   annotate(geom = "point", x = sample_val, y = 0, color = "#CC79A7", size = 5) +
   # The Confidence Interval "Net"
@@ -1027,12 +1040,29 @@ p_inference =
            color = "#CC79A7", linewidth = 1.2) +
   labs(y = "", x = "Caffeine (mg)") +
   annotate(geom = "text", x = sample_val, y = 0.001, label = "Lily's Sample Mean", color = "#CC79A7", vjust = 0) +
-  annotate(geom = "text", x = pop_mean, y = 0.002, label = "Population Mean", color = "#E69F00", vjust = 0) +
+  annotate(geom = "text", x = pop_mean, y = 0.002, label = "Population Mean", color = "#E69F00", vjust = 0, alpha = 0) +
   theme_void() +
   theme(plot.title = element_text(face = "bold", size = 18),
-        plot.subtitle = element_text(size = 14, color = "#444444"))
+        plot.subtitle = element_text(size = 14, color = "#444444")) +
+  theme(axis.text.x = element_text(size = 12))
 
 p_inference
+```
+
+---
+
+### Using the CLT for inference: confidence intervals 
+
+
+```{r}
+
+p_inference +
+  stat_function(fun = dnorm, n = 101, args = list(mean = pop_mean, sd = se),
+  color = "darkgrey", linetype = "dashed") +
+  # The Truth Line (Faint)
+  geom_vline(aes(xintercept = pop_mean), color = "#E69F00", linetype = "dotted", alpha = 0.75) + 
+  annotate(geom = "text", x = pop_mean, y = 0.005, label = "Population Mean", color = "#E69F00", vjust = 0)
+
 ```
 
 # Appendix
@@ -1410,6 +1440,23 @@ Play more with the simulation [here](https://www.mathsisfun.com/data/quincunx.ht
 Each peg is a decision point (Left/Right).
 The final pile is the sum of those decisions.
 :::
+
+---
+
+## Formal CLT 
+
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d) random variables with:
+$$E[X_i] = \mu \quad \text{and} \quad 0 < Var(X_i) = \sigma^2 < \infty$$
+
+<br>
+
+Let $\bar{X}_n$ be the sample mean: $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$
+
+<br>
+
+As the sample size $n$ approaches infinity, the distribution of the sample mean converges to a Normal distribution:
+
+$$\bar{X}_n \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 ---
 
