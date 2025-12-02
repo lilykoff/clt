@@ -84,7 +84,6 @@ scale_fill_okabe  <- function(...) scale_fill_manual(values = okabe_ito, ...)
 #| cache: true
 #| include: false 
 
-sat_score = read_rds(here::here("data", "processed","sat_2017.rds"))
 nh_data = read_rds(here::here("data", "processed", "nhanes_all.rds")) %>% 
   mutate(year = if_else(grepl("NHANES 2001-2002", data_release_cycle), "2001", "2023")) %>% 
   filter(!is.nan(protein_gm))
@@ -112,15 +111,6 @@ protein_df01 = nh_data %>%
   filter(!is.na(protein_gm), !is.nan(protein_gm))
 # write_csv(protein_df23, here::here("docs", "protein_df.csv"))
 
-inc_df = 
-  bmx_joined %>% 
-  filter(age_in_years_at_screening >= 18) %>% 
-  filter(!is.na(ratio_of_family_income_to_poverty)) %>% 
-  rename(ratio = ratio_of_family_income_to_poverty)
-
-
-
-# write_csv(inc_df, here::here("docs", "income_df.csv"))
 
 work_df = read_rds(here::here("data", "processed", "occ_2021.rds")) %>% 
   filter(!is.na(number_of_hours_worked_in_the_last_week)) %>% 
@@ -158,6 +148,13 @@ stocks = stocks %>%
 
 # Question: what is the average daily caffeine consumption among Americans? 
 
+::: {.notes}
+CLT: fundamental to the field of statistics, underpins parametric methods including regression, hypothesis testing, confidence intervals.
+Allows us to use a sample to make statements/learn about a population
+
+We're going to "discover" the central limit theorem through an example/activity using caffeine consumption. 
+::: 
+
 # How might we answer this question? 
 
 # We could survey every single American 
@@ -167,8 +164,10 @@ But this is impractical (impossible?) and expensive
 :::
 
 # We could take a sample 
+
 ::: {.notes}
 Have person 1 take a sample
+We're going to pretend that I have all of the data on the entire population, so we can take samples like this. 
 ::: 
 
 
@@ -271,7 +270,7 @@ s1 %>%
 
 ### Lily's sample
 
-```{r}
+```{r s4}
 #| cache: true
 samp_df = 
   s1 %>% 
@@ -296,7 +295,7 @@ samp_df %>%
 
 ### Lily's sample
 
-```{r}
+```{r s5}
 #| cache: true
 
 
@@ -323,7 +322,7 @@ samp_df2 %>%
 
 ---
 
-```{r}
+```{r caffeine diagram}
 #| cache: true 
 
 # 1. SETUP DATA
@@ -385,7 +384,7 @@ ggplot(plot_data, aes(x = beverage, y = caffeine_mg)) +
 
 ### A different sample 
 
-```{r}
+```{r sample2}
 #| cache: true 
 
 
@@ -410,7 +409,7 @@ samp_df_new %>%
 
 ### A third sample 
 
-```{r}
+```{r sample3}
 #| cache: true 
 
 
@@ -435,7 +434,7 @@ samp_df_again %>%
 ### How do the samples compare? 
 
 
-```{r}
+```{r samp compare}
 #| cache: true
 
 samps_df = 
@@ -465,7 +464,7 @@ samps_df %>%
 ---
 
 
-```{r}
+```{r 100 samples}
 #| cache: true
 
 n_sims = 100
@@ -504,7 +503,7 @@ samps_df %>%
 
 ---
 
-```{r}
+```{r 500 samples}
 #| cache: true
 
 n_sims = 500
@@ -541,7 +540,7 @@ p1
 ---
 
 
-```{r}
+```{r zoom in}
 #| cache: true 
 
 p1 = samps_df %>% 
@@ -566,10 +565,13 @@ p1
 
 # Seems like the means are approaching some number
 
+::: {.notes}
+Since I have the whole population values, I can plot the true population mean
+::: 
 
 ---
 
-```{r}
+```{r add sample mean}
 #| cache: true 
 
 p1 +
@@ -584,10 +586,15 @@ p1 +
 
 # But there's still some variability
 
+::: {.notes}
+If I only have one sample, how do I know if it's "correct"? 
+::: 
+
+
 ---
 
 
-```{r}
+```{r zoom in 2}
 #| cache: true 
 
 
@@ -606,7 +613,7 @@ p1 +
 
 ### Distribution of sample means at  n = 100
 
-```{r}
+```{r dist at 100}
 
 vals = samps_df %>% 
   filter(n == 100) %>% 
@@ -627,11 +634,18 @@ generated_df_big %>% filter(n==100) %>%
 
 ```
 
+::: {.notes}
+Centered around our population mean
+Bell curve
+For samples of size 100, the sample means are clustered around the population mean, and have this specific shape 
+Use this to figure out how far our sample mean is from the truth 
+::: 
+
 ---
 
 ### Distribution of sample means at  n = 100
 
-```{r}
+```{r dist at 100 w normal}
 #| cache: true 
 
 sim_mean = mean(generated_df_big %>% filter(n==100) %>% pull(cumulative_sample_mean))
@@ -658,7 +672,7 @@ hist_plot
 
 ---
 
-```{r}
+```{r dist at 50 zoom}
 
 p1 +
   geom_labelhline(aes(yintercept = mean(caffeine_df$caffeine_mg)), color = "#E69F00", 
@@ -673,7 +687,7 @@ p1 +
 ### Distribution of sample means at  n = 50
 
 
-```{r}
+```{r dist at 50}
 #| cache: true 
 
 vals2 = 
@@ -695,7 +709,7 @@ generated_df_big %>% filter(n==50) %>%
 
 ### Distribution of sample means at  n = 50
 
-```{r}
+```{r dist at 50 w normal}
 #| cache: true
 sim_mean50 = mean(generated_df_big %>% filter(n==50) %>% pull(cumulative_sample_mean))
 sim_sd50 = sd(generated_df_big %>% filter(n==50) %>% pull(cumulative_sample_mean))
@@ -722,7 +736,7 @@ hist_plot
 
 ### Comparison of sample means for n = 50 and n = 100
 
-```{r} 
+```{r compare 50 100} 
 generated_df_big %>% 
   filter(n %in% c(50, 100)) %>% 
   mutate(n = factor(n, levels = c("50", "100"), labels = c("n = 50", "n = 100"))) %>% 
@@ -748,7 +762,8 @@ generated_df_big %>%
 ```
 
 
-# Interactive 
+# Let's compare the sample means for a range of sample sizes
+
 
 ---
 
@@ -907,6 +922,16 @@ normalCurve = {
 }
 ```
 
+::: {.notes}
+As n gets bigger, two things happen
+
+1. Shape gets skinnier (more precise)
+As sample size gets bigger, the effect of extreme values goes down (because it's balanced out by other people in the sample). If I get one person who drinks four starbucks coffees per day in a sample of only 4 people, they will have a big impact on our mean. Less so if I have a sample of 100. 
+2. Shape gets more Normal (symmetric). This is because as sample size increases, probability of having a sample comprised of a lot of extreme values goes down 
+
+More skewed our population is, the more people we need in our sample to ensure we don't get samples with a high amount of extreme values 
+:::
+
 ---
 
 ## Recap so far 
@@ -924,6 +949,7 @@ normalCurve = {
 
 </div> 
 ::: 
+
 
 ---
 
@@ -947,12 +973,16 @@ $$\bar{X}_n  \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 </div>
 
+::: {.notes}
+Because we know the distribution of the sample mean, we know how far away our sample is. We know which one is the right one! 
+::: 
+
 ---
 
 ### The Central Limit Theorem
 
 
-```{r}
+```{r clt plot}
 #| cache: true 
 
 
@@ -971,13 +1001,19 @@ pnormal =
 pnormal
 ```
 
+::: {.notes}
+
+Let's visualize what the CLT tells us for n = 100
+
+:::
+
 ---
 
 
 ### The Central Limit Theorem
 
 
-```{r}
+```{r clt plot with annotations}
 
 
 pop_mean = mean(caffeine_df$caffeine_mg)
@@ -1018,7 +1054,7 @@ pnormal2
 ### Central Limit Theorem
 
 
-```{r}
+```{r add sample points}
 
 yval1 = dnorm(vals[1], mean = pop_mean, sd = se)
 yval2 = dnorm(vals[2], mean = pop_mean, sd = se)
@@ -1036,6 +1072,10 @@ pnormal2 +
            color = "#0072B2", size = 5)
 ```
 
+::: {.notes}
+In fact, ANY sample mean we get is a draw from this distribution
+Therefore, due to facts of the Normal distribution, the sample mean we get is AT MOST 3 SD away from the population mean. Again we can calculate the SD using our sample SD and sample size. You'll notice I'm being a bit hand-wavy here - but next time we'll work through the mechanics of doing this. 
+:::
 
 # If we only observe one sample, how can we actually make a statement about the population? 
 
@@ -1045,7 +1085,7 @@ pnormal2 +
 
 ### Using the CLT for inference: confidence intervals 
 
-```{r}
+```{r ci}
 #| cache: true
 
 # Let's focus on Sample 1 (Pink)
@@ -1087,7 +1127,7 @@ p_inference
 ### Using the CLT for inference: confidence intervals 
 
 
-```{r}
+```{r ci with theory}
 
 p_inference +
   stat_function(fun = dnorm, n = 101, args = list(mean = pop_mean, sd = se),
@@ -1097,6 +1137,11 @@ p_inference +
   annotate(geom = "text", x = pop_mean, y = 0.005, label = "Population Mean", color = "#E69F00", vjust = 0)
 
 ```
+
+::: {.notes}
+CI: range of plausible values for the population mean
+If we a bunch of different samples of size 100 and calcualted this interval, it would contain the population mean 95% of the time
+::: 
 
 # Appendix
 
@@ -1426,7 +1471,7 @@ Other helpful interactive demonstrations: [Stats calculators](https://www.statsc
 
 De Moivre and (later) Laplace connect outcomes of coin flips and the Normal distribution 
 
-```{r}
+```{r de moivre laplace}
 #| cache: true 
 
 set.seed(345)
