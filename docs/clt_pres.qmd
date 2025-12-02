@@ -146,6 +146,17 @@ stocks = stocks %>%
 ```
 
 
+# Learning objectives 
+
+1. Differentiate between the distribution of the population  and the distribution of the sample mean
+
+2. Describe how changing sample size impacts the precision (variance) and shape (normality) of the sample means
+
+3. Explain how the Central Limit Theorem quantifies the uncertainty of a single sample
+
+
+---
+
 # Question: what is the average daily caffeine consumption among Americans? 
 
 ::: {.notes}
@@ -329,8 +340,8 @@ samp_df2 %>%
 # Replace these URLs with your local file paths! 
 # e.g., image = c("figs/espresso.jpg", "figs/soda.jpg", ...)
 caffeine_data = tibble(
-  beverage = c("Monster Java\n300 mg", "Coca Cola\n35 mg", "16oz Coffee\n315 mg", "16oz Latte\n150 mg", "16oz Matcha\n65 mg", "Kombucha\n68 mg", "Herbal Tea\n0 mg"),
-  caffeine_mg = c(300, 35, 315, 150, 65, 68, 0),
+  beverage = c("Monster Java\n(16oz)\n300 mg", "Coca Cola\n(12oz)\n35 mg", "Starbucks Blonde\n(16oz)\n315 mg", "Starbucks Latte\n(16oz)\n150 mg", "Starbucks Matcha\n(16oz)\n65 mg", "Kombucha\n(16oz)\n68 mg", "Herbal Tea\n0 mg", "Home coffee\n(8oz)\n110mg"),
+  caffeine_mg = c(300, 35, 315, 150, 65, 68, 0, 100),
   # Using reliable placeholder icons for the demo
   image = c(here::here("docs/figs/monster.jpeg"),
             here::here("docs/figs/coke.jpeg"),
@@ -338,7 +349,8 @@ caffeine_data = tibble(
             here::here("docs/figs/latte.jpeg"),
             here::here("docs/figs/matcha.jpeg"),
             here::here("docs/figs/kombucha.png"),
-            here::here("docs/figs/herbal.jpeg"))
+            here::here("docs/figs/herbal.jpeg"),
+            here::here("docs/figs/home_coffee.jpeg"))
 )
 
 # 2. PREP: Reorder the beverage factor by caffeine amount
@@ -371,7 +383,7 @@ ggplot(plot_data, aes(x = beverage, y = caffeine_mg)) +
   theme(
     panel.grid.major.x = element_blank(), # Remove vertical grid lines
     panel.grid.minor = element_blank(),
-    axis.text.x = element_text(size = 14, face = "bold", color = "#444444"),
+    axis.text.x = element_text(size = 12, color = "#444444"),
     axis.text.y = element_blank(), # Hide Y axis numbers (since we have labels)
     axis.title.y = element_blank(),
     plot.title = element_text(hjust = 0.5, size = 20, face = "bold", color = "#6F4E37")
@@ -749,9 +761,9 @@ generated_df_big %>%
   stat_function(fun = dnorm, args = list(mean = sim_mean, sd = sim_sd),
                  linewidth = 1, linetype = "dashed", color = "#E69F00") +
   annotate(geom = "label", size = 4, 
-           x = 150, y = 0.020, label = "Theoretical normal curve\nn = 100", color = "#E69F00") +
+           x = 150, y = 0.020, label = "Theoretical normal curve\nn = 100", color = "#E69F00", linetype = "dashed") +
   annotate(geom = "label", 
-           x = 175, y = 0.005, label = "Theoretical normal curve\nn = 50", color = "#0072B2", size = 4) +
+           x = 175, y = 0.005, label = "Theoretical normal curve\nn = 50", color = "#0072B2", size = 4, linetype = "dashed") +
   labs(x = "Sample mean caffeine (mg)", y = "Density") +
   scale_x_continuous(breaks=seq(5,225, 10)) +
   theme_sub_legend(position = c(0.9, 0.8),
@@ -762,7 +774,7 @@ generated_df_big %>%
 ```
 
 
-# Let's compare the sample means for a range of sample sizes
+# Let's compare the distribution of sample means for a range of sample sizes
 
 
 ---
@@ -770,11 +782,25 @@ generated_df_big %>%
 ```{ojs}
 data = FileAttachment("caffeine_df.csv").csv({ typed: true })
 
-viewof sample_size = Inputs.range(
-  [2, 120], 
-  {value: 2, step: 1, label: "Sample size:"}
+<!-- viewof sample_size = Inputs.range( -->
+<!--   [2, 120],  -->
+<!--   {value: 2, step: 1, label: "Sample size:"} -->
+<!-- ) -->
+
+sample_values = [2, 10, 25, 50, 75, 100, 200, 500]
+
+viewof sample_index = Inputs.range(
+  [0, sample_values.length - 1], // Slide from index 0 to 7
+  {
+    value: 0, // 
+    step: 1, 
+    label: "Sample size:",
+    // This makes the label show "50" instead of "3"
+    format: i => sample_values[i] 
+  }
 )
 
+sample_size = sample_values[sample_index]
 
 
 sample_means = {
@@ -934,13 +960,49 @@ More skewed our population is, the more people we need in our sample to ensure w
 
 ---
 
+```{r comparisons}
+#| cache: true 
+
+extra = 
+  map_dfr(.x = 1:n_sims,
+          .f = function(sim){
+            set.seed(sim + 1232)
+            df = caffeine_df %>% 
+              slice_sample(n=500) %>% 
+              mutate(cumulative_sample_mean = cummean(caffeine_mg),
+                     n = row_number(),
+                     name = sim)
+          }) %>% 
+  filter(n == 500)
+
+generated_df_big %>% 
+  bind_rows(extra) %>% 
+  filter(n %in% c(2, 10, 25, 50, 100, 500)) %>% 
+  mutate(n = factor(n, levels = c("2", "10", "25", "50", "100", "500"),
+                    labels = c("n = 2", "n = 10", "n = 25", "n = 50",
+                               "n = 100", "n = 500"))) %>% 
+  ggplot(aes(x = cumulative_sample_mean)) +
+  geom_density(aes(fill = n, color = n), alpha = 0.5) +
+  labs(x = "Sample mean caffeine (mg)", y = "Density", title = "Comparison of distribution of sample mean at different sample sizes") +
+  scale_x_continuous(breaks=seq(0,500, 25), limits = c(0, 500)) +
+  scale_fill_viridis_d(option = "C", name = "Sample size") +
+  scale_color_viridis_d(option = "C", name = "Sample size") +
+  theme_sub_legend(position = c(0.9, 0.5),
+                   text = element_text(size = 13),
+                   title = element_text(size = 14),
+                   background = element_rect(fill = "#f6f5f3", color = "#1a1a1a"))
+
+```
+
+---
+
 ## Recap so far 
 
 ::: {.incremental}
 <div style="font-size: 130%;">
 
-+ We waned to use a sample to learn about a population
-+ So far, we've been taking a lot of different samples of size $n$
++ We wanted to use a sample to learn about a population
++ So far, we've taken a lot of different samples of size $n$
 + We saw that the mean of those samples were Normal, as long as $n$ is big enough 
 + **In reality**
   + We only get **one** sample and sample mean ($\bar{X}_n$)
@@ -975,6 +1037,9 @@ $$\bar{X}_n  \xrightarrow{d} N\left(\mu, \frac{\sigma^2}{n}\right)$$
 
 ::: {.notes}
 Because we know the distribution of the sample mean, we know how far away our sample is. We know which one is the right one! 
+
+Convergence in distribution: shape approaches shape of Normal
+Mathematically: probability rules that govern shape of sample mean = prob rules that govern shape of Normal 
 ::: 
 
 ---
@@ -1124,6 +1189,8 @@ p_inference
 
 ---
 
+
+
 ### Using the CLT for inference: confidence intervals 
 
 
@@ -1143,6 +1210,10 @@ CI: range of plausible values for the population mean
 If we a bunch of different samples of size 100 and calcualted this interval, it would contain the population mean 95% of the time
 ::: 
 
+# Questions? 
+
+
+
 # Appendix
 
 ---
@@ -1151,11 +1222,20 @@ If we a bunch of different samples of size 100 and calcualted this interval, it 
 
 ```{ojs}
 data2 = FileAttachment("work_df.csv").csv({ typed: true })
+sample_values2 = [2, 10, 25, 50, 75, 100, 200, 500]
 
-viewof sample_size2 = Inputs.range(
-  [2, 100], 
-  {value: 2, step: 1, label: "Sample size:"}
+viewof sample_index2 = Inputs.range(
+  [0, sample_values2.length - 1], // Slide from index 0 to 7
+  {
+    value: 0, // Index 3 corresponds to value "50" (your previous default)
+    step: 1, 
+    label: "Sample size:",
+    // This makes the label show "50" instead of "3"
+    format: i => sample_values2[i] 
+  }
 )
+
+sample_size2 = sample_values2[sample_index2]
 
 sample_means2 = {
   // Dependency tracking: re-run when these change
@@ -1310,11 +1390,25 @@ normalCurve2 = {
 ```{ojs}
 stock = FileAttachment("stocks.csv").csv({ typed: true })
 
-viewof sample_size_st = Inputs.range(
-  [2, 100], 
-  {value: 2, step: 1, label: "Sample size:"}
+<!-- viewof sample_size_st = Inputs.range( -->
+<!--   [2, 100],  -->
+<!--   {value: 2, step: 1, label: "Sample size:"} -->
+<!-- ) -->
+
+sample_values3 = [2, 10, 25, 50, 75, 100, 200, 500]
+
+viewof sample_index3 = Inputs.range(
+  [0, sample_values3.length - 1], // Slide from index 0 to 7
+  {
+    value: 0, // Index 3 corresponds to value "50" (your previous default)
+    step: 1, 
+    label: "Sample size:",
+    // This makes the label show "50" instead of "3"
+    format: i => sample_values3[i] 
+  }
 )
 
+sample_size_st = sample_values3[sample_index3]
 
 
 sample_means_stock = {
