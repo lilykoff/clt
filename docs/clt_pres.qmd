@@ -619,7 +619,7 @@ vals = samps_df %>%
 generated_df_big %>% filter(n==100) %>% 
   ggplot(aes(x = cumulative_sample_mean)) +
   geom_histogram(color = "black", binwidth = 10, fill = "#444444")+
-  scale_x_continuous(breaks=seq(0, 200, 10)) +
+  scale_x_continuous(breaks=seq(5, 200, 10)) +
   annotate(geom = "point", x = vals[1], y = 0, color = "#CC79A7", size = 4) +
   annotate(geom = "point", x = vals[2], y = 0, color = "#009E73", size = 4) +
     annotate(geom = "point", x = vals[3], y = 0, size = 4, color = "#0072B2") +
@@ -644,17 +644,19 @@ hist_plot = generated_df_big %>%
                  color = "black", binwidth = 10, fill = "#444444") +
   # 2. Theoretical Normal Curve
   stat_function(fun = dnorm, args = list(mean = sim_mean, sd = sim_sd),color = "#D55E00", linewidth = 1.5) +
+  scale_x_continuous(breaks=seq(5, 200, 10)) +
   # 3. The Specific Samples
   annotate(geom = "point", x = vals[1], y = 0, color = "#CC79A7", size = 5) +
   annotate(geom = "point", x = vals[2], y = 0, color = "#009E73", size = 5) +
   annotate(geom = "point", x = vals[3], y = 0, size = 5, color = "#0072B2") +
-  scale_x_continuous(breaks=seq(0, 200, 10)) +
   labs(x = "Sample mean caffeine (mg)", y = "Density")
 
 hist_plot
 ```
 
 # What does the distribution of sample means look like at n = 50? 
+
+---
 
 ```{r}
 
@@ -682,7 +684,7 @@ vals2 =
 generated_df_big %>% filter(n==50) %>% 
   ggplot(aes(x = cumulative_sample_mean)) +
   geom_histogram(color = "black", binwidth = 10, fill = "#444444")+
-  scale_x_continuous(breaks=seq(0, 220, 10)) +
+  scale_x_continuous(breaks=seq(5, 225, 10)) +
   annotate(geom = "point", x = vals2[1], y = 0, color = "#CC79A7", size = 4) +
   annotate(geom = "point", x = vals2[2], y = 0, color = "#009E73", size = 4) +
     annotate(geom = "point", x = vals2[3], y = 0, size = 4, color = "#0072B2") +
@@ -695,8 +697,8 @@ generated_df_big %>% filter(n==50) %>%
 
 ```{r}
 #| cache: true
-sim_mean = mean(generated_df_big %>% filter(n==50) %>% pull(cumulative_sample_mean))
-sim_sd = sd(generated_df_big %>% filter(n==50) %>% pull(cumulative_sample_mean))
+sim_mean50 = mean(generated_df_big %>% filter(n==50) %>% pull(cumulative_sample_mean))
+sim_sd50 = sd(generated_df_big %>% filter(n==50) %>% pull(cumulative_sample_mean))
 
 hist_plot = generated_df_big %>% 
   filter(n==50) %>% 
@@ -704,16 +706,47 @@ hist_plot = generated_df_big %>%
   geom_histogram(aes(y = after_stat(density)), 
                  color = "black", binwidth = 10, fill = "#444444") +
   # 2. Theoretical Normal Curve
-  stat_function(fun = dnorm, args = list(mean = sim_mean, sd = sim_sd),color = "#D55E00", linewidth = 1.5) +
+  stat_function(fun = dnorm, args = list(mean = sim_mean50, sd = sim_sd50),color = "#D55E00", linewidth = 1.5) +
   # 3. The Specific Samples
    annotate(geom = "point", x = vals2[1], y = 0, color = "#CC79A7", size = 4) +
   annotate(geom = "point", x = vals2[2], y = 0, color = "#009E73", size = 4) +
     annotate(geom = "point", x = vals2[3], y = 0, size = 4, color = "#0072B2") +
-  scale_x_continuous(breaks=seq(0, 220, 10)) +
+  scale_x_continuous(breaks=seq(5, 225, 10)) +
   labs(x = "Sample mean caffeine (mg)", y = "Density")
 
 hist_plot
 ```
+
+---
+
+
+### Comparison of sample means for n = 50 and n = 100
+
+```{r} 
+generated_df_big %>% 
+  filter(n %in% c(50, 100)) %>% 
+  mutate(n = factor(n, levels = c("50", "100"), labels = c("n = 50", "n = 100"))) %>% 
+  ggplot(aes(x = cumulative_sample_mean)) +
+  geom_density(aes(color = n, fill = n, group = n), alpha = 0.5, color = NA) +
+  scale_fill_manual(values = c("#0072B2", "#E69F00"), name = "Sample Size") +
+  # geom_density(aes(fill = n, color = n), alpha = 0.5) +
+  stat_function(fun = dnorm, args = list(mean = sim_mean50, sd = sim_sd50),
+                 linewidth = 1, color = "#0072B2", linetype = "dashed") +
+  stat_function(fun = dnorm, args = list(mean = sim_mean, sd = sim_sd),
+                 linewidth = 1, linetype = "dashed", color = "#E69F00") +
+  annotate(geom = "label", size = 4, 
+           x = 150, y = 0.020, label = "Theoretical normal curve\nn = 100", color = "#E69F00") +
+  annotate(geom = "label", 
+           x = 175, y = 0.005, label = "Theoretical normal curve\nn = 50", color = "#0072B2", size = 4) +
+  labs(x = "Sample mean caffeine (mg)", y = "Density") +
+  scale_x_continuous(breaks=seq(5,225, 10)) +
+  theme_sub_legend(position = c(0.9, 0.8),
+                   text = element_text(size = 13),
+                   title = element_text(size = 14),
+                   background = element_rect(fill = "#f6f5f3", color = "#1a1a1a"))
+
+```
+
 
 # Interactive 
 
@@ -904,7 +937,8 @@ normalCurve = {
 
 + As the sample size $n$ increases, the distribution of the sample mean $\bar{X}_n$ approaches a Normal distribution with mean $\mu$ and variance $\frac{\sigma^2}{n}$
 
-
+  + $\mu$: population mean
+  + $\sigma^2$: population variance 
 :::
 
 ::: {.fragment}
@@ -932,7 +966,7 @@ pnormal =
   stat_function(fun = dnorm, n = 101, args = list(mean = pop_mean, sd = se), linewidth = 1.1) +
   labs(y = "Density", x = "Sample mean caffeine intake (mg)", title = "Approximate distribution of sample mean when n = 100",
        subtitle = "By CLT") +
-  scale_x_continuous(breaks=seq(60, 180, 10))
+  scale_x_continuous(breaks=seq(55, 185, 10))
 
 pnormal
 ```
@@ -944,7 +978,6 @@ pnormal
 
 
 ```{r}
-#| cache: true 
 
 
 pop_mean = mean(caffeine_df$caffeine_mg)
