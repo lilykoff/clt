@@ -146,16 +146,15 @@ stocks = stocks %>%
 ```
 
 
-# Learning objectives 
+## Learning objectives 
 
-1. Differentiate between the distribution of the population  and the distribution of the sample mean
+<div style="font-size: 130%;">
 
-2. Describe how changing sample size impacts the precision (variance) and shape (normality) of the sample means
+1. Describe how changing sample size impacts the distribution of the sample mean
 
-3. Explain how the Central Limit Theorem quantifies the uncertainty of a single sample
+2. Explain how the Central Limit Theorem quantifies the uncertainty of a sample mean
 
-
----
+</div>
 
 # Question: what is the average daily caffeine consumption among Americans? 
 
@@ -164,6 +163,8 @@ CLT: fundamental to the field of statistics, underpins parametric methods includ
 Allows us to use a sample to make statements/learn about a population
 
 We're going to "discover" the central limit theorem through an example/activity using caffeine consumption. 
+
+Assume familiarity with concepts of mean, variance, distribution, Normal distribution
 ::: 
 
 # How might we answer this question? 
@@ -600,6 +601,7 @@ p1 +
 
 ::: {.notes}
 If I only have one sample, how do I know if it's "correct"? 
+We're not interested in tail behavior, I want to know what is happening *now* 
 ::: 
 
 
