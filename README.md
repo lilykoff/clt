@@ -2,4 +2,4 @@
 Teaching the central limit theorem
 
 
-[Link to presentation](tinyurl.com/koffclt25) 
+[Link to presentation](https://lilykoff.github.io/clt/clt_pres.html) 
